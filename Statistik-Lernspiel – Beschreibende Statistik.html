@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<!-- saved from url=(0177)file:///Users/astridimholt/Library/Containers/com.microsoft.onenote.mac/Data/tmp/OneNote/16.108/Exported/%7BBDFE29F5-BC42-7047-BD58-3FE8D79D872F%7D/NT/1/statistik_lernspiel.html -->
+<html lang="de"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statistik-Lernspiel – Beschreibende Statistik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="./Statistik-Lernspiel – Beschreibende Statistik_files/css2" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F6F2;
+    --surface: #FFFFFF;
+    --border: rgba(0,0,0,0.1);
+    --border-strong: rgba(0,0,0,0.18);
+    --text-primary: #1A1A18;
+    --text-secondary: #6B6B65;
+    --text-muted: #9B9B94;
+    --accent: #1D4ED8;
+    --accent-light: #EFF6FF;
+    --green: #15803D;
+    --green-light: #F0FDF4;
+    --green-border: #86EFAC;
+    --red: #B91C1C;
+    --red-light: #FEF2F2;
+    --red-border: #FCA5A5;
+    --amber: #92400E;
+    --amber-light: #FFFBEB;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 660px;
+  }
+
+  /* Header */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+  .app-title {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .app-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .score-badges { display: flex; gap: 8px; }
+  .badge {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 5px 13px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+  }
+  .badge span { color: var(--text-primary); }
+
+  /* Progress */
+  .progress-wrap { margin-bottom: 1.5rem; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .progress-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+
+  /* Mode tabs */
+  .tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+  .tab {
+    flex: 1; text-align: center; padding: 7px 10px; border-radius: 7px; font-size: 13px; font-weight: 500;
+    cursor: pointer; color: var(--text-secondary); transition: all 0.15s; border: none; background: none;
+  }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { background: var(--bg); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    margin-bottom: 1rem;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .q-meta { font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .q-text { font-size: 16px; line-height: 1.65; color: var(--text-primary); margin-bottom: 1.25rem; white-space: pre-line; }
+
+  /* Data chips */
+  .data-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.25rem; }
+  .chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px; font-weight: 500;
+    padding: 5px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text-primary);
+  }
+
+  /* Options */
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt {
+    text-align: left; padding: 11px 15px;
+    border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--surface); font-size: 14px; font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary); cursor: pointer; transition: all 0.12s; line-height: 1.45;
+  }
+  .opt:hover:not(:disabled) { background: var(--bg); border-color: var(--border-strong); }
+  .opt.correct { background: var(--green-light); border-color: var(--green-border); color: var(--green); font-weight: 500; }
+  .opt.wrong { background: var(--red-light); border-color: var(--red-border); color: var(--red); }
+  .opt:disabled { cursor: default; }
+
+  /* Input */
+  .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .input-row input {
+    flex: 1; padding: 10px 14px; border-radius: var(--radius);
+    border: 1px solid var(--border); font-size: 14px;
+    font-family: 'DM Mono', monospace; color: var(--text-primary);
+    background: var(--surface); outline: none; transition: border-color 0.15s;
+  }
+  .input-row input:focus { border-color: var(--accent); }
+  .input-row input.correct { border-color: var(--green); background: var(--green-light); }
+  .input-row input.wrong { border-color: var(--red); background: var(--red-light); }
+  .check-btn {
+    padding: 10px 18px; border-radius: var(--radius);
+    border: 1px solid var(--border-strong); background: var(--surface);
+    font-size: 14px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    cursor: pointer; color: var(--text-primary); transition: all 0.12s; white-space: nowrap;
+  }
+  .check-btn:hover { background: var(--bg); }
+  .hint { font-size: 13px; color: var(--text-muted); }
+
+  /* Feedback */
+  .feedback {
+    border-radius: var(--radius); padding: 12px 16px;
+    font-size: 14px; line-height: 1.6; margin-bottom: 12px;
+    animation: fadeIn 0.2s ease;
+  }
+  .feedback.correct { background: var(--green-light); border: 1px solid var(--green-border); color: var(--green); }
+  .feedback.wrong { background: var(--red-light); border: 1px solid var(--red-border); color: var(--red); }
+
+  .next-btn {
+    width: 100%; padding: 11px; border-radius: var(--radius);
+    border: 1px solid var(--border-strong); background: var(--surface);
+    font-size: 14px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    cursor: pointer; color: var(--text-primary); transition: all 0.12s;
+  }
+  .next-btn:hover { background: var(--bg); }
+
+  /* Boxplot */
+  .boxplot-wrap { margin: 0.5rem 0 1.25rem; overflow: visible; }
+  svg.bp { width: 100%; height: 100px; overflow: visible; }
+
+  /* Result */
+  .result {
+    text-align: center; padding: 2.5rem 2rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); animation: fadeIn 0.3s ease;
+  }
+  .result-emoji { font-size: 40px; margin-bottom: 12px; }
+  .result-pct { font-size: 52px; font-weight: 600; letter-spacing: -0.04em; color: var(--text-primary); margin-bottom: 6px; }
+  .result-msg { font-size: 15px; color: var(--text-secondary); margin-bottom: 1.75rem; }
+  .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 1.75rem; }
+  .stat-box { background: var(--bg); border-radius: var(--radius); padding: 14px 10px; text-align: center; }
+  .stat-box .val { font-size: 22px; font-weight: 600; color: var(--text-primary); }
+  .stat-box .lbl { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .restart-btn {
+    width: 100%; padding: 12px; border-radius: var(--radius);
+    border: 1px solid var(--border-strong); background: var(--surface);
+    font-size: 15px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    cursor: pointer; color: var(--text-primary); transition: all 0.12s;
+  }
+  .restart-btn:hover { background: var(--bg); }
+
+  /* Mode label badges */
+  .mode-tag {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 3px 10px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .tag-mc { background: var(--accent-light); color: var(--accent); }
+  .tag-input { background: var(--amber-light); color: var(--amber); }
+  .tag-boxplot { background: #F5F3FF; color: #5B21B6; }
+
+  @media (max-width: 480px) {
+    .options { grid-template-columns: 1fr; }
+    .app-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="app-header">
+    <div>
+      <div class="app-title">Statistik-Lernspiel</div>
+      <div class="app-subtitle">Beschreibende Statistik · Einführungsphase</div>
+    </div>
+    <div class="score-badges">
+      <div class="badge">Punkte: <span id="score-display">0</span></div>
+      <div class="badge">Frage <span id="q-num">1</span>/10</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-meta"><span>Fortschritt</span><span id="pct-label">0 %</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-mc" onclick="setMode(&#39;mc&#39;)">Multiple Choice</button>
+    <button class="tab" id="tab-input" onclick="setMode(&#39;input&#39;)">Berechnen</button>
+    <button class="tab" id="tab-boxplot" onclick="setMode(&#39;boxplot&#39;)">Boxplot</button>
+  </div>
+
+  <div id="game-area"><div class="card"><span class="mode-tag tag-mc">Multiple Choice</span><div class="q-meta">Frage 1 von 10</div><div class="q-text">Welche Aussage zum Median ist korrekt?</div><div class="options"><button class="opt" id="opt-0" onclick="checkMC(0)">Der Median wird stark von Ausreißern beeinflusst.</button><button class="opt" id="opt-1" onclick="checkMC(1)">Der Median ist der mittlere Wert nach dem Sortieren.</button><button class="opt" id="opt-2" onclick="checkMC(2)">Median und arithmetisches Mittel sind immer gleich.</button><button class="opt" id="opt-3" onclick="checkMC(3)">Der Median eignet sich nur für gerade Datenanzahlen.</button></div></div><div id="fb"></div></div>
+</div>
+
+<script>
+const questions = {
+  mc: [
+    {
+      q: "Ein Unternehmen erhebt die monatlichen Umsätze (in T€) von 7 Filialen: 12, 15, 15, 18, 20, 22, 22. Was ist der Modus?",
+      data: [12,15,15,18,20,22,22],
+      opts: ["15", "18", "15 und 22", "22"],
+      correct: 2,
+      explanation: "Der Modus ist der am häufigsten vorkommende Wert. Sowohl 15 als auch 22 kommen jeweils zweimal vor – es gibt zwei Modi (bimodal)."
+    },
+    {
+      q: "Welche Aussage zum Median ist korrekt?",
+      data: null,
+      opts: ["Der Median wird stark von Ausreißern beeinflusst.", "Der Median ist der mittlere Wert nach dem Sortieren.", "Median und arithmetisches Mittel sind immer gleich.", "Der Median eignet sich nur für gerade Datenanzahlen."],
+      correct: 1,
+      explanation: "Der Median teilt die sortierte Datenreihe in zwei gleich große Hälften. Er ist robust gegenüber Ausreißern – ein wichtiger Vorteil gegenüber dem arithmetischen Mittel."
+    },
+    {
+      q: "Die Noten von 5 Schülern lauten: 1, 2, 2, 3, 12. Welches Maß eignet sich NICHT zur Beschreibung der typischen Note?",
+      data: [1,2,2,3,12],
+      opts: ["Modus", "Median", "Arithmetisches Mittel", "Alle drei sind gleich geeignet"],
+      correct: 2,
+      explanation: "Der Ausreißer 12 verzerrt das arithmetische Mittel stark (x̄ = 4). Modus (2) und Median (2) sind robuster und beschreiben den Datensatz hier besser."
+    },
+    {
+      q: "Was beschreibt die Standardabweichung?",
+      data: null,
+      opts: ["Den mittleren Wert aller Beobachtungen.", "Die Differenz zwischen Maximum und Minimum.", "Die durchschnittliche Abweichung vom Mittelwert.", "Den häufigsten Wert im Datensatz."],
+      correct: 2,
+      explanation: "Die Standardabweichung s misst, wie stark die Werte im Durchschnitt vom arithmetischen Mittel abweichen. Kleine s = geringe Streuung, große s = hohe Streuung."
+    },
+    {
+      q: "Ein Boxplot zeigt: Min = 10, Q1 = 20, Q2 = 30, Q3 = 40, Max = 50. Wie groß ist der Interquartilsabstand (IQR)?",
+      data: null,
+      opts: ["20", "30", "40", "10"],
+      correct: 0,
+      explanation: "IQR = Q3 – Q1 = 40 – 20 = 20. Er gibt die Breite der mittleren 50 % der Daten an und ist ein robustes Streuungsmaß."
+    },
+    {
+      q: "Die Gehälter in einer Abteilung sind: 2000, 2100, 2200, 2300, 8000 €. Der Median beträgt:",
+      data: [2000,2100,2200,2300,8000],
+      opts: ["2000 €", "2200 €", "3320 €", "2500 €"],
+      correct: 1,
+      explanation: "Nach dem Sortieren ist der mittlere (3.) Wert von 5 Werten: 2200 €. Das arithmetische Mittel wäre 3320 € – verzerrt durch den Ausreißer 8000 €."
+    },
+    {
+      q: "Welche Maße zählen zu den Streuungsmaßen?",
+      data: null,
+      opts: ["Modus und Median", "Mittelwert und Median", "Standardabweichung und IQR", "Modus und Mittelwert"],
+      correct: 2,
+      explanation: "Streuungsmaße beschreiben, wie weit die Daten auseinanderliegen: Standardabweichung, Varianz, IQR und Spannweite. Modus, Median und Mittelwert sind Lagemaße."
+    }
+  ],
+  input: [
+    {
+      q: "Berechne das arithmetische Mittel der Datenwerte.",
+      data: [4, 7, 13, 2, 9],
+      answer: 7,
+      tolerance: 0.05,
+      hint: "Addiere alle Werte und dividiere durch die Anzahl.",
+      explanation: "x̄ = (4 + 7 + 13 + 2 + 9) / 5 = 35 / 5 = 7"
+    },
+    {
+      q: "Bestimme den Median der Datenwerte.",
+      data: [3, 6, 8, 11, 14, 19],
+      answer: 9.5,
+      tolerance: 0.1,
+      hint: "Zuerst sortieren! Bei gerader Anzahl: Mittelwert der beiden mittleren Werte.",
+      explanation: "Sortiert: 3, 6, 8, 11, 14, 19 → Median = (8 + 11) / 2 = 9,5"
+    },
+    {
+      q: "Wie groß ist der Interquartilsabstand (IQR)?\nQ1 = 12,   Q3 = 27",
+      data: null,
+      answer: 15,
+      tolerance: 0.05,
+      hint: "IQR = Q3 – Q1",
+      explanation: "IQR = 27 – 12 = 15. Der IQR umfasst die mittleren 50 % aller Daten."
+    },
+    {
+      q: "Berechne das arithmetische Mittel.",
+      data: [10, 20, 30, 40, 50],
+      answer: 30,
+      tolerance: 0.05,
+      hint: "Summe aller Werte ÷ Anzahl der Werte.",
+      explanation: "x̄ = (10 + 20 + 30 + 40 + 50) / 5 = 150 / 5 = 30"
+    },
+    {
+      q: "Berechne den Median.\nHinweis: Die Werte sind bereits sortiert.",
+      data: [5, 8, 12, 17, 23],
+      answer: 12,
+      tolerance: 0.05,
+      hint: "Bei ungerader Anzahl ist der Median der mittlere Wert.",
+      explanation: "5 Werte → der 3. Wert ist der Median: 12"
+    }
+  ],
+  boxplot: [
+    {
+      q: "Lies den Boxplot ab: Wie groß ist der Median (Q2)?",
+      min: 5, q1: 15, q2: 25, q3: 38, max: 55,
+      answer: 25, tolerance: 1,
+      explanation: "Der Median (Q2) ist die mittlere Linie in der Box. Hier liegt er bei 25."
+    },
+    {
+      q: "Lies den Boxplot ab: Wie groß ist Q3 (oberes Quartil)?",
+      min: 10, q1: 20, q2: 35, q3: 45, max: 60,
+      answer: 45, tolerance: 1,
+      explanation: "Q3 ist der rechte Rand der Box – der Wert, unterhalb dessen 75 % der Daten liegen. Hier: 45."
+    },
+    {
+      q: "Berechne den IQR aus dem Boxplot.",
+      min: 8, q1: 18, q2: 30, q3: 42, max: 58,
+      answer: 24, tolerance: 1,
+      explanation: "IQR = Q3 – Q1 = 42 – 18 = 24. Der IQR entspricht der Breite der Box."
+    }
+  ]
+};
+
+let state = {
+  mode: 'mc', qIndex: 0, score: 0, total: 0,
+  answered: false, correct: 0, incorrect: 0,
+  shuffled: { mc: [], input: [], boxplot: [] }
+};
+
+function shuffle(arr) {
+  let a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function initShuffle() {
+  state.shuffled.mc = shuffle(questions.mc);
+  state.shuffled.input = shuffle(questions.input);
+  state.shuffled.boxplot = shuffle(questions.boxplot);
+}
+
+function currentQ() {
+  return state.shuffled[state.mode][state.qIndex % state.shuffled[state.mode].length];
+}
+
+function setMode(m) {
+  if (state.total >= 10) return;
+  state.mode = m;
+  state.qIndex = 0;
+  state.answered = false;
+  ['mc', 'input', 'boxplot'].forEach(k =>
+    document.getElementById('tab-' + k).classList.toggle('active', k === m)
+  );
+  render();
+}
+
+function updateMeta() {
+  document.getElementById('score-display').textContent = state.score;
+  document.getElementById('q-num').textContent = Math.min(state.total + 1, 10);
+  const pct = Math.round(Math.min(state.total, 10) / 10 * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('pct-label').textContent = pct + ' %';
+}
+
+function makeBP(min, q1, q2, q3, max) {
+  const W = 560, top = 28, bH = 38, bTop = top, bBot = top + bH;
+  const pad = 50, range = max - min;
+  const sc = v => pad + ((v - min) / range) * (W - 2 * pad);
+  let s = `<svg class="bp" viewBox="0 0 ${W} ${top + bH + 30}" role="img" aria-label="Boxplot">`;
+  s += `<line x1="${pad}" y1="${bTop+bH/2}" x2="${sc(max)}" y2="${bTop+bH/2}" stroke="#9B9B94" stroke-width="1.5"/>`;
+  s += `<rect x="${sc(q1)}" y="${bTop}" width="${sc(q3)-sc(q1)}" height="${bH}" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5" rx="4"/>`;
+  s += `<line x1="${sc(q2)}" y1="${bTop}" x2="${sc(q2)}" y2="${bBot}" stroke="#1D4ED8" stroke-width="2.5"/>`;
+  [[min,'Min'],[q1,'Q1'],[q2,'Q2'],[q3,'Q3'],[max,'Max']].forEach(([v, lbl]) => {
+    const x = sc(v), isQ2 = lbl === 'Q2';
+    s += `<line x1="${x}" y1="${bTop-5}" x2="${x}" y2="${bBot+5}" stroke="${isQ2?'#1D4ED8':'#9B9B94'}" stroke-width="1"/>`;
+    s += `<text x="${x}" y="${bBot+16}" text-anchor="middle" font-size="11" fill="${isQ2?'#1D4ED8':'#6B6B65'}" font-family="'DM Mono',monospace">${v}</text>`;
+    s += `<text x="${x}" y="${bTop-9}" text-anchor="middle" font-size="10" fill="#9B9B94" font-family="'DM Sans',sans-serif">${lbl}</text>`;
+  });
+  return s + `</svg>`;
+}
+
+function renderMC() {
+  const q = currentQ();
+  let h = `<div class="card"><span class="mode-tag tag-mc">Multiple Choice</span>`;
+  h += `<div class="q-meta">Frage ${state.total + 1} von 10</div>`;
+  h += `<div class="q-text">${q.q}</div>`;
+  if (q.data) h += `<div class="data-row">${q.data.map(v => `<span class="chip">${v}</span>`).join('')}</div>`;
+  h += `<div class="options">${q.opts.map((o,i) => `<button class="opt" id="opt-${i}" onclick="checkMC(${i})">${o}</button>`).join('')}</div>`;
+  h += `</div><div id="fb"></div>`;
+  return h;
+}
+
+function renderInput() {
+  const q = currentQ();
+  let h = `<div class="card"><span class="mode-tag tag-input">Berechnen</span>`;
+  h += `<div class="q-meta">Frage ${state.total + 1} von 10</div>`;
+  h += `<div class="q-text">${q.q}</div>`;
+  if (q.data) h += `<div class="data-row">${q.data.map(v => `<span class="chip">${v}</span>`).join('')}</div>`;
+  h += `<div class="input-row"><input type="number" id="ans" placeholder="Deine Antwort …" step="0.1" /><button class="check-btn" onclick="checkInput()">Prüfen ✓</button></div>`;
+  h += `<div class="hint">💡 ${q.hint}</div></div><div id="fb"></div>`;
+  return h;
+}
+
+function renderBoxplot() {
+  const q = currentQ();
+  let h = `<div class="card"><span class="mode-tag tag-boxplot">Boxplot lesen</span>`;
+  h += `<div class="q-meta">Frage ${state.total + 1} von 10</div>`;
+  h += `<div class="q-text">${q.q}</div>`;
+  h += `<div class="boxplot-wrap">${makeBP(q.min, q.q1, q.q2, q.q3, q.max)}</div>`;
+  h += `<div class="input-row"><input type="number" id="ans" placeholder="Deine Antwort …" step="1" /><button class="check-btn" onclick="checkInput()">Prüfen ✓</button></div>`;
+  h += `</div><div id="fb"></div>`;
+  return h;
+}
+
+function renderResult() {
+  const pct = Math.round(state.correct / 10 * 100);
+  const emoji = pct >= 80 ? '🎉' : pct >= 50 ? '👍' : '📚';
+  const msg = pct >= 80 ? 'Ausgezeichnet! Du beherrschst die Grundlagen sicher.'
+            : pct >= 50 ? 'Gut gemacht! Mit etwas mehr Übung klappt es noch besser.'
+            : 'Noch etwas Übung – du wirst es schaffen!';
+  return `<div class="result">
+    <div class="result-emoji">${emoji}</div>
+    <div class="result-pct">${pct} %</div>
+    <div class="result-msg">${msg}</div>
+    <div class="stat-row">
+      <div class="stat-box"><div class="val">${state.correct}</div><div class="lbl">Richtig</div></div>
+      <div class="stat-box"><div class="val">${state.incorrect}</div><div class="lbl">Falsch</div></div>
+      <div class="stat-box"><div class="val">${state.score}</div><div class="lbl">Punkte</div></div>
+    </div>
+    <button class="restart-btn" onclick="restartGame()">Nochmal spielen ↺</button>
+  </div>`;
+}
+
+function render() {
+  updateMeta();
+  const area = document.getElementById('game-area');
+  if (state.total >= 10) { area.innerHTML = renderResult(); return; }
+  if (state.mode === 'mc') area.innerHTML = renderMC();
+  else if (state.mode === 'input') area.innerHTML = renderInput();
+  else area.innerHTML = renderBoxplot();
+  const inp = document.getElementById('ans');
+  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') checkInput(); });
+}
+
+function checkMC(i) {
+  if (state.answered) return;
+  state.answered = true;
+  state.total++;
+  const q = currentQ();
+  const ok = i === q.correct;
+  if (ok) { state.score += 10; state.correct++; } else state.incorrect++;
+  q.opts.forEach((_, idx) => {
+    const btn = document.getElementById('opt-' + idx);
+    btn.disabled = true;
+    if (idx === q.correct) btn.classList.add('correct');
+    else if (idx === i && !ok) btn.classList.add('wrong');
+  });
+  document.getElementById('fb').innerHTML =
+    `<div class="feedback ${ok ? 'correct' : 'wrong'}">${ok ? '✓ Richtig! ' : '✗ Leider falsch. '}${q.explanation}</div>
+     <button class="next-btn" onclick="nextQ()">Weiter →</button>`;
+  updateMeta();
+}
+
+function checkInput() {
+  if (state.answered) return;
+  const inp = document.getElementById('ans');
+  if (!inp || inp.value === '') return;
+  const val = parseFloat(inp.value.replace(',', '.'));
+  if (isNaN(val)) return;
+  state.answered = true;
+  state.total++;
+  const q = currentQ();
+  const ok = Math.abs(val - q.answer) <= (q.tolerance || 0.5);
+  if (ok) { state.score += 10; state.correct++; } else state.incorrect++;
+  inp.disabled = true;
+  inp.classList.add(ok ? 'correct' : 'wrong');
+  document.getElementById('fb').innerHTML =
+    `<div class="feedback ${ok ? 'correct' : 'wrong'}">${ok ? '✓ Richtig! ' : `✗ Die richtige Antwort ist: ${q.answer}. `}${q.explanation}</div>
+     <button class="next-btn" onclick="nextQ()">Weiter →</button>`;
+  updateMeta();
+}
+
+function nextQ() {
+  state.answered = false;
+  state.qIndex++;
+  render();
+}
+
+function restartGame() {
+  state = { mode: 'mc', qIndex: 0, score: 0, total: 0, answered: false, correct: 0, incorrect: 0, shuffled: { mc: [], input: [], boxplot: [] } };
+  initShuffle();
+  ['mc', 'input', 'boxplot'].forEach(k =>
+    document.getElementById('tab-' + k).classList.toggle('active', k === 'mc')
+  );
+  render();
+}
+
+initShuffle();
+render();
+</script>
+
+
+</body></html>
