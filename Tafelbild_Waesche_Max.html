@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tafelbild Wäsche Max</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: links die Schritte des Tafelbilds, rechts der mitwachsende Graph (sticky). BBS1-Schema, bewusst nur hell. */
+  :root {
+    color-scheme: light;
+    --bg: #f0f4f8; --surface: #ffffff; --card: #ffffff; --border: #c8d6e5;
+    --accent: #1a4f8c; --accent2: #2874a6; --tint: #eef4fb;
+    --green: #1a7a4a; --red: #c0392b; --yellow: #b7770d;
+    --text: #1c2833; --muted: #5d6d7e;
+    --cE: #1f6fb5; --cK: #a5281b; --cG: #1a7a4a; --cP: #5b4fcf;
+    --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --serif: 'DM Serif Display', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: clamp(15px, 1.05vw + 6px, 20px); }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; }
+
+  header {
+    background: linear-gradient(135deg, #1a4f8c 0%, #2874a6 100%);
+    border-bottom: 1px solid #154070; color: #fff;
+    padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  header img { height: 44px; border-radius: 6px; background: #fff; padding: 4px; }
+  header h1 { font-family: var(--serif); font-weight: 400; font-size: 1.5rem; line-height: 1.15; }
+  header p { color: #b8d4f0; font-size: .8rem; }
+
+  .tab-bar { background: #e8eef5; border-bottom: 2px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 0 24px; }
+  .tab { font: 600 .95rem var(--sans); color: var(--muted); background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 12px 14px; cursor: pointer; }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tools { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+  .btn { font: 500 .85rem var(--sans); padding: 8px 14px; border-radius: 9px; cursor: pointer; border: 1px solid transparent; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: var(--surface); color: var(--muted); border-color: var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn[aria-pressed="true"] { background: var(--tint); border-color: var(--accent); color: var(--accent); }
+  :focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
+
+  main { max-width: 1500px; margin: 0 auto; padding: 20px 24px 40px; }
+  .board { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .board[hidden] { display: none; }
+  .steps { display: flex; flex-direction: column; gap: 12px; }
+  .aside { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 12px; }
+  @media (max-width: 900px) { .board { grid-template-columns: 1fr; } .aside { position: static; order: -1; } }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 13px; box-shadow: 0 1px 4px rgba(26,79,140,.07); }
+  .given { padding: 14px 18px; font-size: .92rem; }
+  .given b { color: var(--accent); }
+
+  .step { overflow: hidden; }
+  .step-head { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; background: none; border: none; padding: 11px 16px; cursor: pointer; font-family: var(--sans); color: var(--text); }
+  .num { flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #1a4f8c, #2874a6); color: #fff; font-weight: 700; font-size: .95rem; }
+  .step-title { font-weight: 600; font-size: 1.05rem; flex: 1; }
+  .state { font-size: .75rem; color: var(--muted); border: 1px dashed var(--border); border-radius: 99px; padding: 2px 10px; white-space: nowrap; }
+  .step.open .state { border-style: solid; color: var(--green); border-color: #a9dfbf; background: #eafaf1; }
+  .step-body { display: none; padding: 4px 18px 16px 18px; border-top: 1px solid var(--border); }
+  .step.open .step-body { display: block; }
+
+  .m { font-size: 1.08rem; margin-top: 8px; }
+  .m i, .legend i, .given i, td i, th i { font-family: Georgia, 'Times New Roman', serif; }
+  .ind { padding-left: 1.6rem; }
+  .res { display: inline-block; margin-top: 8px; padding: 5px 12px; border: 2px solid var(--accent); border-radius: 8px; background: var(--tint); font-weight: 600; font-size: 1.08rem; }
+  .note { color: var(--muted); font-size: .88rem; margin-top: 8px; }
+  .say { margin-top: 10px; padding: 8px 12px; border-left: 4px solid var(--yellow); background: #fef9e7; font-size: .95rem; }
+  .E { color: var(--cE); font-weight: 600; } .K { color: var(--cK); font-weight: 600; } .G { color: var(--cG); font-weight: 600; } .P { color: var(--cP); font-weight: 600; }
+  .rt { border-top: 1.5px solid currentColor; padding: 0 2px; }
+
+  .scroll { overflow-x: auto; margin-top: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; font-variant-numeric: tabular-nums; }
+  th, td { padding: 6px 10px; text-align: left; border: 1px solid var(--border); vertical-align: top; }
+  th { background: #d5e3f0; font-weight: 600; }
+  tr:nth-child(odd) td { background: #f8fbff; } tr:nth-child(even) td { background: #f0f5fb; }
+  .num-table td, .num-table th { text-align: right; }
+  .num-table td:first-child, .num-table th:first-child { text-align: left; }
+
+  .cas { margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  body.no-cas .cas { display: none; }
+  .cas-h { background: #e8eef5; font-size: .75rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); padding: 5px 12px; }
+  .cas-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 10px; padding: 6px 12px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: .82rem; }
+  .cas-row span:last-child { color: var(--green); }
+  .cas-row span:last-child::before { content: "→ "; color: var(--muted); }
+  .cas-alt { padding: 4px 12px; border-top: 1px solid var(--border); background: #f3f7fb; font-size: .7rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .cas-tip { padding: 6px 12px; border-top: 1px solid var(--border); font-size: .8rem; color: var(--muted); }
+
+  .graph { padding: 10px 12px 12px; }
+  .graph h2 { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 2px 4px 6px; }
+  svg { display: block; width: 100%; height: auto; }
+  svg text { font-family: var(--sans); fill: var(--text); }
+  .legend { list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 8px 6px 0; font-size: .92rem; }
+  .legend li { display: flex; gap: 8px; align-items: baseline; }
+  .legend b { min-width: 9.5rem; }
+  [data-layer].off { display: none; }
+
+  footer { max-width: 1500px; margin: 0 auto; padding: 0 24px 24px; color: var(--muted); font-size: .78rem; }
+</style>
+</head>
+<body>
+<header>
+  <img src="data:image/jpeg;base64,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" alt="Logo BBS 1 Delmenhorst">
+  <div>
+    <h1>Tafelbild: Wäsche Max – Erlös, Kosten, Gewinn</h1>
+    <p>Mathematik · BGW 1 · Einführungsphase · Quadratische Funktionen in ökonomischen Anwendungen</p>
+  </div>
+</header>
+
+<nav class="tab-bar" aria-label="Aufgaben und Steuerung">
+  <div role="tablist" style="display:flex;gap:4px">
+    <button class="tab" role="tab" id="tab-4" data-board="aufgabe-4" aria-selected="true">Aufgabe 4 · Köche-Serie</button>
+    <button class="tab" role="tab" id="tab-5" data-board="aufgabe-5" aria-selected="false">Aufgabe 5 · Serie Klassik</button>
+  </div>
+  <div class="tools">
+    <button class="btn btn-primary" id="next">Nächster Schritt</button>
+    <button class="btn btn-ghost" id="all">Alles zeigen</button>
+    <button class="btn btn-ghost" id="none">Alles verdecken</button>
+    <button class="btn btn-ghost" id="cas" aria-pressed="true">CAS-Eingaben</button>
+  </div>
+</nav>
+
+<main>
+<!-- ======================= AUFGABE 4 ======================= -->
+<div class="board" id="aufgabe-4" role="tabpanel" aria-labelledby="tab-4">
+  <div class="steps">
+    <div class="card given">
+      <b>Gegeben:</b> variable Kosten 0,5 GE/ME, Fixkosten 3 GE, <span class="E"><i>E</i>(<i>x</i>) = −0,2<i>x</i>(<i>x</i> − 14)</span>.
+      <b>Gesucht:</b> Beschriftung der Grafik, <i>D</i><sub>ök</sub>, Punkte A bis D mit Deutung, Gewinn- und Verlustintervalle.
+    </div>
+
+    <section class="card step" data-step="1">
+      <button class="step-head" aria-expanded="false"><span class="num">1</span><span class="step-title">Funktionen aufstellen und Grafik beschriften</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m"><span class="K">Kosten: <i>K</i>(<i>x</i>) = 0,5<i>x</i> + 3</span> → Gerade (rot)</p>
+        <p class="m"><span class="E">Erlös: <i>E</i>(<i>x</i>) = −0,2<i>x</i>(<i>x</i> − 14) = −0,2<i>x</i>² + 2,8<i>x</i></span> → Parabel durch den Ursprung (blau)</p>
+        <p class="m"><span class="G">Gewinn: <i>G</i>(<i>x</i>) = <i>E</i>(<i>x</i>) − <i>K</i>(<i>x</i>) = −0,2<i>x</i>² + 2,3<i>x</i> − 3</span> → Parabel mit <i>G</i>(0) = −3 (grün)</p>
+        <p class="m">Achsen: Abszisse <i>x</i> in ME, Ordinate <i>K</i>(<i>x</i>), <i>E</i>(<i>x</i>), <i>G</i>(<i>x</i>) in GE</p>
+        <p class="m"><i>D</i><sub>ök</sub>: <i>E</i>(<i>x</i>) ≥ 0, Nullstellen von <i>E</i> sind 0 und 14</p>
+        <p class="res"><i>D</i><sub>ök</sub> = [0; 14] &nbsp;(Sättigungsmenge 14 ME)</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>K(x):=0.5x+3</span><span>K(x) := 1/2 x + 3</span></div>
+          <div class="cas-row"><span>E(x):=-0.2x(x-14)</span><span>E(x) := −1/5 x (x − 14)</span></div>
+          <div class="cas-row"><span>G(x):=E(x)-K(x)</span><span>G(x) := −1/5 x² + 23/10 x − 3</span></div>
+          <div class="cas-row"><span>Löse(E(x)=0)</span><span>{x = 0, x = 14}</span></div>
+          <div class="cas-alt">Alternativ</div>
+          <div class="cas-row"><span>Nullstelle(E)</span><span>{x = 0, x = 14}</span></div>
+          <div class="cas-row"><span>Löse(E(x)&gt;=0)</span><span>{0 ≤ x ≤ 14}</span></div>
+          <div class="cas-tip">Dezimalpunkt statt Komma eingeben. Die Taste ≈ wandelt Brüche in Dezimalzahlen um.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card step" data-step="2">
+      <button class="step-head" aria-expanded="false"><span class="num">2</span><span class="step-title">A und B: Schnittpunkte von <i>E</i> und <i>K</i></span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Ansatz: <i>E</i>(<i>x</i>) = <i>K</i>(<i>x</i>) &nbsp;⇔&nbsp; <i>G</i>(<i>x</i>) = 0</p>
+        <p class="m ind">−0,2<i>x</i>² + 2,3<i>x</i> − 3 = 0 &nbsp; | : (−0,2)</p>
+        <p class="m ind"><i>x</i>² − 11,5<i>x</i> + 15 = 0 &nbsp; | <i>p</i>-<i>q</i>-Formel</p>
+        <p class="m ind"><i>x</i><sub>1,2</sub> = 5,75 ± √<span class="rt">5,75² − 15</span> = 5,75 ± 4,25</p>
+        <p class="m ind"><i>x</i><sub>1</sub> = 1,5 &nbsp;und&nbsp; <i>x</i><sub>2</sub> = 10</p>
+        <p class="m"><i>y</i>-Werte: <i>K</i>(1,5) = 0,5 · 1,5 + 3 = 3,75 &nbsp;und&nbsp; <i>K</i>(10) = 0,5 · 10 + 3 = 8</p>
+        <p class="res">A(1,5 | 3,75) &nbsp;und&nbsp; B(10 | 8)</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>Löse(E(x)=K(x))</span><span>{x = 3/2, x = 10}</span></div>
+          <div class="cas-row"><span>K(3/2)</span><span>15/4 &nbsp;≈ 3.75</span></div>
+          <div class="cas-row"><span>K(10)</span><span>8</span></div>
+          <div class="cas-alt">Alternativ</div>
+          <div class="cas-row"><span>Schnittpunkt(E, K)</span><span>{(3/2, 15/4), (10, 8)}</span></div>
+          <div class="cas-row"><span>Nullstelle(G)</span><span>{x = 3/2, x = 10}</span></div>
+          <div class="cas-row"><span>Lösungen(G(x)=0)</span><span>{3/2, 10}</span></div>
+          <div class="cas-tip">Schnittpunkt liefert beide Koordinaten in einem Schritt. In älteren GeoGebra-Versionen heißt der Befehl Schneide.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card step" data-step="3">
+      <button class="step-head" aria-expanded="false"><span class="num">3</span><span class="step-title">C: Scheitelpunkt der Gewinnparabel</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Der Scheitel liegt in der Mitte zwischen den Nullstellen von <i>G</i>:</p>
+        <p class="m ind"><i>x</i><sub>S</sub> = (1,5 + 10) : 2 = 5,75</p>
+        <p class="m ind"><i>G</i>(5,75) = −0,2 · 5,75² + 2,3 · 5,75 − 3 = 3,6125</p>
+        <p class="res">C(5,75 | 3,6125)</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>G(5.75)</span><span>289/80 &nbsp;≈ 3.61</span></div>
+          <div class="cas-row"><span>Extremum(G)</span><span>{(23/4, 289/80)}</span></div>
+          <div class="cas-alt">Alternativ</div>
+          <div class="cas-row"><span>VollständigesQuadrat(G(x))</span><span>−1/5 (x − 23/4)² + 289/80</span></div>
+          <div class="cas-row"><span>(3/2+10)/2</span><span>23/4 &nbsp;≈ 5.75</span></div>
+          <div class="cas-tip">VollständigesQuadrat liefert die Scheitelpunktform, aus der sich C direkt ablesen lässt.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card step" data-step="4">
+      <button class="step-head" aria-expanded="false"><span class="num">4</span><span class="step-title">D: Scheitelpunkt der Erlösparabel</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Nullstellen von <i>E</i>: 0 und 14 (aus der Produktform ablesbar)</p>
+        <p class="m ind"><i>x</i><sub>S</sub> = (0 + 14) : 2 = 7</p>
+        <p class="m ind"><i>E</i>(7) = −0,2 · 7 · (7 − 14) = 9,8</p>
+        <p class="res">D(7 | 9,8)</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>E(7)</span><span>49/5 &nbsp;≈ 9.8</span></div>
+          <div class="cas-row"><span>Extremum(E)</span><span>{(7, 49/5)}</span></div>
+          <div class="cas-alt">Alternativ</div>
+          <div class="cas-row"><span>VollständigesQuadrat(E(x))</span><span>−1/5 (x − 7)² + 49/5</span></div>
+          <div class="cas-row"><span>Nullstelle(E)</span><span>{x = 0, x = 14}</span></div>
+          <div class="cas-row"><span>(0+14)/2</span><span>7</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card step" data-step="5">
+      <button class="step-head" aria-expanded="false"><span class="num">5</span><span class="step-title">Koordinaten interpretieren</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <div class="scroll"><table>
+          <tr><th>Punkt</th><th>Fachbegriff</th><th>Bedeutung für Wäsche Max</th></tr>
+          <tr><td>A(1,5 | 3,75)</td><td>Gewinnschwelle (Break-even-Point)</td><td>Bei 1,5 ME betragen Erlös und Kosten jeweils 3,75 GE. Ab hier beginnt die Gewinnzone.</td></tr>
+          <tr><td>B(10 | 8)</td><td>Gewinngrenze</td><td>Bei 10 ME betragen Erlös und Kosten jeweils 8 GE. Hier endet die Gewinnzone.</td></tr>
+          <tr><td>C(5,75 | 3,6125)</td><td>Gewinnmaximum</td><td>Bei 5,75 ME (gewinnmaximale Menge) ist der Gewinn mit rund 3,61 GE am größten.</td></tr>
+          <tr><td>D(7 | 9,8)</td><td>Erlösmaximum</td><td>Bei 7 ME (erlösmaximale Menge) ist der Erlös mit 9,8 GE am größten.</td></tr>
+        </table></div>
+        <p class="say">Merke: Die erlösmaximale Menge (7 ME) ist nicht die gewinnmaximale Menge (5,75 ME).</p>
+      </div>
+    </section>
+
+    <section class="card step" data-step="6">
+      <button class="step-head" aria-expanded="false"><span class="num">6</span><span class="step-title">Gewinn- und Verlustintervalle</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Gewinn: <i>G</i>(<i>x</i>) &gt; 0, die grüne Parabel liegt über der <i>x</i>-Achse (blau liegt über rot).</p>
+        <p class="res">Gewinn für <i>x</i> ∈ ]1,5; 10[</p>
+        <p class="m">Verlust: <i>G</i>(<i>x</i>) &lt; 0 innerhalb von <i>D</i><sub>ök</sub>.</p>
+        <p class="res">Verlust für <i>x</i> ∈ [0; 1,5[ und <i>x</i> ∈ ]10; 14]</p>
+        <p class="note">Bei <i>x</i> = 1,5 und <i>x</i> = 10 gilt <i>G</i>(<i>x</i>) = 0: weder Gewinn noch Verlust, daher offene Intervallgrenzen.</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>Löse(G(x)&gt;0)</span><span>{3/2 &lt; x &lt; 10}</span></div>
+          <div class="cas-alt">Alternativ</div>
+          <div class="cas-row"><span>Löse(E(x)&gt;K(x))</span><span>{3/2 &lt; x &lt; 10}</span></div>
+          <div class="cas-row"><span>Löse(G(x)&lt;0)</span><span>{x &lt; 3/2, x &gt; 10}</span></div>
+          <div class="cas-tip">Die Verlustlösung noch auf <i>D</i><sub>ök</sub> = [0; 14] einschränken.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="aside">
+    <div class="card graph">
+      <h2>Grafik zur Köche-Serie</h2>
+      <div id="svg4"></div>
+      <ul class="legend">
+        <li data-layer="1"><b><i>D</i><sub>ök</sub> = [0; 14]</b><span>ökonomisch sinnvoller Bereich</span></li>
+        <li data-layer="2"><b>A(1,5 | 3,75)</b><span>Gewinnschwelle</span></li>
+        <li data-layer="2"><b>B(10 | 8)</b><span>Gewinngrenze</span></li>
+        <li data-layer="3"><b>C(5,75 | 3,6125)</b><span>Gewinnmaximum</span></li>
+        <li data-layer="4"><b>D(7 | 9,8)</b><span>Erlösmaximum</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= AUFGABE 5 ======================= -->
+<div class="board" id="aufgabe-5" role="tabpanel" aria-labelledby="tab-5" hidden>
+  <div class="steps">
+    <div class="card given">
+      <b>Gegeben:</b> <span class="P"><i>p</i>(<i>x</i>) = −0,3<i>x</i> + 27</span>; für <i>G</i>: Faktor vor <i>x</i>² ist −0,3, Gewinnschwelle 20 ME, Gewinngrenze 60 ME.
+      <b>Gesucht:</b> <i>G</i> in Normalform, <i>E</i> und <i>K</i>, Graphen über <i>D</i><sub>ök</sub>, Cournot’scher Punkt.
+    </div>
+
+    <section class="card step" data-step="1">
+      <button class="step-head" aria-expanded="false"><span class="num">1</span><span class="step-title">Informationen übersetzen</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Gewinnschwelle und Gewinngrenze sind die Nullstellen von <i>G</i>:</p>
+        <p class="m ind"><i>x</i><sub>1</sub> = 20 &nbsp;und&nbsp; <i>x</i><sub>2</sub> = 60</p>
+        <p class="m">„Steigung −0,3“ meint den Streckfaktor der Parabel: <i>a</i> = −0,3 (nach unten geöffnet).</p>
+        <p class="m">Ansatz in Linearfaktorform:</p>
+        <p class="res"><i>G</i>(<i>x</i>) = <i>a</i> · (<i>x</i> − <i>x</i><sub>1</sub>) · (<i>x</i> − <i>x</i><sub>2</sub>)</p>
+      </div>
+    </section>
+
+    <section class="card step" data-step="2">
+      <button class="step-head" aria-expanded="false"><span class="num">2</span><span class="step-title">Gewinnfunktion in Normalform</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m"><i>G</i>(<i>x</i>) = −0,3 · (<i>x</i> − 20) · (<i>x</i> − 60)</p>
+        <p class="m ind">= −0,3 · (<i>x</i>² − 60<i>x</i> − 20<i>x</i> + 1200)</p>
+        <p class="m ind">= −0,3 · (<i>x</i>² − 80<i>x</i> + 1200)</p>
+        <p class="res G"><i>G</i>(<i>x</i>) = −0,3<i>x</i>² + 24<i>x</i> − 360</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>G(x):=-0.3(x-20)(x-60)</span><span>G(x) := −3/10 (x − 20) (x − 60)</span></div>
+          <div class="cas-row"><span>Multipliziere(G(x))</span><span>−3/10 x² + 24x − 360</span></div>
+          <div class="cas-alt">Alternativ</div>
+          <div class="cas-row"><span>Polynom(G(x))</span><span>−3/10 x² + 24x − 360</span></div>
+          <div class="cas-alt">Alternativ über Bedingungen</div>
+          <div class="cas-row"><span>f(x):=-0.3x^2+b*x+c</span><span>f(x) := −3/10 x² + b x + c</span></div>
+          <div class="cas-row"><span>Löse({f(20)=0, f(60)=0}, {b, c})</span><span>{{b = 24, c = −360}}</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card step" data-step="3">
+      <button class="step-head" aria-expanded="false"><span class="num">3</span><span class="step-title">Erlösfunktion und Kostenfunktion</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Erlös = Preis · Menge:</p>
+        <p class="m ind"><i>E</i>(<i>x</i>) = <i>p</i>(<i>x</i>) · <i>x</i> = (−0,3<i>x</i> + 27) · <i>x</i></p>
+        <p class="res E"><i>E</i>(<i>x</i>) = −0,3<i>x</i>² + 27<i>x</i></p>
+        <p class="m">Aus <i>G</i> = <i>E</i> − <i>K</i> folgt <i>K</i> = <i>E</i> − <i>G</i>:</p>
+        <p class="m ind"><i>K</i>(<i>x</i>) = (−0,3<i>x</i>² + 27<i>x</i>) − (−0,3<i>x</i>² + 24<i>x</i> − 360)</p>
+        <p class="m ind">= −0,3<i>x</i>² + 27<i>x</i> + 0,3<i>x</i>² − 24<i>x</i> + 360</p>
+        <p class="res K"><i>K</i>(<i>x</i>) = 3<i>x</i> + 360</p>
+        <p class="note">Deutung: variable Stückkosten 3 GE/ME, Fixkosten 360 GE.</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>p(x):=-0.3x+27</span><span>p(x) := −3/10 x + 27</span></div>
+          <div class="cas-row"><span>E(x):=Multipliziere(p(x)*x)</span><span>E(x) := −3/10 x² + 27x</span></div>
+          <div class="cas-row"><span>K(x):=Vereinfache(E(x)-G(x))</span><span>K(x) := 3x + 360</span></div>
+          <div class="cas-alt">Alternativ und Kontrolle</div>
+          <div class="cas-row"><span>Multipliziere(E(x)-G(x))</span><span>3x + 360</span></div>
+          <div class="cas-row"><span>Schnittpunkt(E, K)</span><span>{(20, 420), (60, 540)}</span></div>
+          <div class="cas-tip">Die Schnittstellen 20 und 60 bestätigen Gewinnschwelle und Gewinngrenze.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card step" data-step="4">
+      <button class="step-head" aria-expanded="false"><span class="num">4</span><span class="step-title"><i>D</i><sub>ök</sub> und Wertetabelle</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Der Preis darf nicht negativ werden: <i>p</i>(<i>x</i>) ≥ 0 &nbsp;⇔&nbsp; −0,3<i>x</i> + 27 ≥ 0 &nbsp;⇔&nbsp; <i>x</i> ≤ 90</p>
+        <p class="res"><i>D</i><sub>ök</sub> = [0; 90] &nbsp;(Sättigungsmenge 90 ME)</p>
+        <div class="scroll"><table class="num-table">
+          <tr><th><i>x</i> in ME</th><th>0</th><th>20</th><th>40</th><th>45</th><th>60</th><th>90</th></tr>
+          <tr><td class="E"><i>E</i>(<i>x</i>) in GE</td><td>0</td><td>420</td><td>600</td><td>607,5</td><td>540</td><td>0</td></tr>
+          <tr><td class="K"><i>K</i>(<i>x</i>) in GE</td><td>360</td><td>420</td><td>480</td><td>495</td><td>540</td><td>630</td></tr>
+          <tr><td class="G"><i>G</i>(<i>x</i>) in GE</td><td>−360</td><td>0</td><td>120</td><td>112,5</td><td>0</td><td>−630</td></tr>
+        </table></div>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>Löse(p(x)&gt;=0)</span><span>{x ≤ 90}</span></div>
+          <div class="cas-alt">Alternativ</div>
+          <div class="cas-row"><span>Nullstelle(p)</span><span>{x = 90}</span></div>
+          <div class="cas-row"><span>Nullstelle(E)</span><span>{x = 0, x = 90}</span></div>
+          <div class="cas-row"><span>E(45)</span><span>1215/2 &nbsp;≈ 607.5</span></div>
+          <div class="cas-row"><span>G(90)</span><span>−630</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card step" data-step="5">
+      <button class="step-head" aria-expanded="false"><span class="num">5</span><span class="step-title">Graphen zeichnen</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Maßstab im Heft: <i>x</i>-Achse 1 cm ≙ 10 ME, <i>y</i>-Achse 1 cm ≙ 100 GE (von −700 bis 700).</p>
+        <p class="m">Kontrolle am Graphen:</p>
+        <p class="m ind"><span class="E"><i>E</i></span> und <span class="K"><i>K</i></span> schneiden sich bei <i>x</i> = 20 und <i>x</i> = 60, genau dort hat <span class="G"><i>G</i></span> seine Nullstellen.</p>
+        <p class="m ind"><span class="G"><i>G</i></span> beginnt bei −360 (Fixkosten als Verlust), <span class="E"><i>E</i></span> endet bei der Sättigungsmenge 90 auf der <i>x</i>-Achse.</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-tip">E, K und G werden in der Grafikansicht der CAS-App mitgezeichnet. Ansicht anpassen: <i>x</i> von −10 bis 100, <i>y</i> von −700 bis 700 (Zahnrad, dann Einstellungen der Grafik).</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card step" data-step="6">
+      <button class="step-head" aria-expanded="false"><span class="num">6</span><span class="step-title">Cournot’scher Punkt</span><span class="state">verdeckt</span></button>
+      <div class="step-body">
+        <p class="m">Gewinnmaximale Menge = Scheitelstelle von <i>G</i>, Mitte der Nullstellen:</p>
+        <p class="m ind"><i>x</i><sub>C</sub> = (20 + 60) : 2 = 40</p>
+        <p class="m">Zugehöriger Preis aus der Preis-Absatzfunktion:</p>
+        <p class="m ind"><i>p</i>(40) = −0,3 · 40 + 27 = 15</p>
+        <p class="res">C(40 | 15)</p>
+        <p class="say">Der Gewinn ist am größten, wenn 40 ME zum Preis von 15 GE/ME abgesetzt werden. Der maximale Gewinn beträgt <i>G</i>(40) = 120 GE.</p>
+        <p class="note">Der Cournot’sche Punkt liegt auf dem Graphen von <i>p</i>, nicht auf dem von <i>G</i>.</p>
+        <div class="cas"><div class="cas-h">GeoGebra CAS</div>
+          <div class="cas-row"><span>Extremum(G)</span><span>{(40, 120)}</span></div>
+          <div class="cas-row"><span>p(40)</span><span>15</span></div>
+          <div class="cas-alt">Alternativ</div>
+          <div class="cas-row"><span>VollständigesQuadrat(G(x))</span><span>−3/10 (x − 40)² + 120</span></div>
+          <div class="cas-row"><span>(20+60)/2</span><span>40</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="aside">
+    <div class="card graph">
+      <h2>Koordinatensystem zur Serie Klassik</h2>
+      <div id="svg5"></div>
+      <ul class="legend">
+        <li data-layer="4"><b><i>D</i><sub>ök</sub> = [0; 90]</b><span>ökonomisch sinnvoller Bereich</span></li>
+        <li data-layer="5"><b><i>x</i> = 20 und <i>x</i> = 60</b><span>Gewinnschwelle und Gewinngrenze</span></li>
+        <li data-layer="6"><b>C(40 | 15)</b><span>Cournot’scher Punkt, <i>G</i>(40) = 120 GE</span></li>
+      </ul>
+    </div>
+    <div class="card graph" data-layer="6">
+      <h2>Preis-Absatzfunktion mit Cournot’schem Punkt</h2>
+      <div id="svgP"></div>
+    </div>
+  </div>
+</div>
+</main>
+
+<footer>BBS 1 Delmenhorst · Handelslehranstalten · Mathematik BGW 1 · Schritte durch Antippen einzeln auf- und zudecken</footer>
+
+<script>
+(function () {
+  var C = { E: '#1f6fb5', K: '#a5281b', G: '#1a7a4a', P: '#5b4fcf', ax: '#1c2833', grid: '#dbe5ef', mut: '#5d6d7e' };
+  function de(n) { return String(n).replace('.', ',').replace('-', '−'); }
+
+  function Plot(o) {
+    var W = o.W, H = o.H, m = o.m;
+    var sx = function (x) { return m.l + (x - o.x0) / (o.x1 - o.x0) * (W - m.l - m.r); };
+    var sy = function (y) { return H - m.b - (y - o.y0) / (o.y1 - o.y0) * (H - m.t - m.b); };
+    var s = [];
+    var i;
+    for (i = Math.ceil(o.x0 / o.gx) * o.gx; i <= o.x1; i += o.gx) s.push('<line x1="' + sx(i) + '" x2="' + sx(i) + '" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="' + C.grid + '"/>');
+    for (i = Math.ceil(o.y0 / o.gy) * o.gy; i <= o.y1; i += o.gy) s.push('<line y1="' + sy(i) + '" y2="' + sy(i) + '" x1="' + m.l + '" x2="' + (W - m.r) + '" stroke="' + C.grid + '"/>');
+    s.push('<line x1="' + m.l + '" x2="' + (W - m.r + 6) + '" y1="' + sy(0) + '" y2="' + sy(0) + '" stroke="' + C.ax + '" stroke-width="1.6" marker-end="url(#arr)"/>');
+    s.push('<line x1="' + sx(0) + '" x2="' + sx(0) + '" y1="' + (H - m.b) + '" y2="' + (m.t - 6) + '" stroke="' + C.ax + '" stroke-width="1.6" marker-end="url(#arr)"/>');
+    o.xt.forEach(function (v) {
+      s.push('<line x1="' + sx(v) + '" x2="' + sx(v) + '" y1="' + (sy(0) - 4) + '" y2="' + (sy(0) + 4) + '" stroke="' + C.ax + '"/>');
+      s.push('<text x="' + sx(v) + '" y="' + (sy(0) + 18) + '" font-size="12" text-anchor="middle" fill="' + C.mut + '" style="fill:' + C.mut + '">' + de(v) + '</text>');
+    });
+    o.yt.forEach(function (v) {
+      s.push('<line y1="' + sy(v) + '" y2="' + sy(v) + '" x1="' + (sx(0) - 4) + '" x2="' + (sx(0) + 4) + '" stroke="' + C.ax + '"/>');
+      s.push('<text x="' + (sx(0) - 8) + '" y="' + (sy(v) + 4) + '" font-size="12" text-anchor="end" style="fill:' + C.mut + '">' + de(v) + '</text>');
+    });
+    return {
+      sx: sx, sy: sy, s: s,
+      curve: function (f, a, b, col, layer) {
+        var d = '', n = 120, k, x;
+        for (k = 0; k <= n; k++) { x = a + (b - a) * k / n; d += (k ? 'L' : 'M') + sx(x).toFixed(1) + ' ' + sy(f(x)).toFixed(1); }
+        s.push('<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2.6" stroke-linecap="round"' + (layer ? ' data-layer="' + layer + '"' : '') + '/>');
+      },
+      text: function (x, y, t, col, layer, opt) {
+        opt = opt || {};
+        s.push('<text x="' + sx(x) + '" y="' + sy(y) + '" font-size="' + (opt.size || 14) + '" font-weight="' + (opt.w || 600) + '" text-anchor="' + (opt.a || 'start') + '" style="fill:' + col + '"' + (layer ? ' data-layer="' + layer + '"' : '') + '>' + t + '</text>');
+      },
+      dash: function (xa, ya, xb, yb, col, layer) {
+        s.push('<line x1="' + sx(xa) + '" y1="' + sy(ya) + '" x2="' + sx(xb) + '" y2="' + sy(yb) + '" stroke="' + col + '" stroke-width="1.4" stroke-dasharray="5 4"' + (layer ? ' data-layer="' + layer + '"' : '') + '/>');
+      },
+      dot: function (x, y, col, layer) {
+        s.push('<circle cx="' + sx(x) + '" cy="' + sy(y) + '" r="4.5" fill="' + col + '" stroke="#fff" stroke-width="1.5"' + (layer ? ' data-layer="' + layer + '"' : '') + '/>');
+      },
+      band: function (xa, xb, col, layer) {
+        s.push('<rect x="' + sx(xa) + '" y="' + m.t + '" width="' + (sx(xb) - sx(xa)) + '" height="' + (H - m.t - m.b) + '" fill="' + col + '" data-layer="' + layer + '"/>');
+      },
+      seg: function (xa, xb, col, layer) {
+        s.push('<line x1="' + sx(xa) + '" x2="' + sx(xb) + '" y1="' + sy(0) + '" y2="' + sy(0) + '" stroke="' + col + '" stroke-width="6" stroke-linecap="round" opacity=".55" data-layer="' + layer + '"/>');
+      },
+      out: function (label) {
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + label + '"><defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="' + C.ax + '"/></marker></defs>' + s.join('') + '</svg>';
+      }
+    };
+  }
+
+  /* ---------- Aufgabe 4 ---------- */
+  var E4 = function (x) { return -0.2 * x * (x - 14); }, K4 = function (x) { return 0.5 * x + 3; }, G4 = function (x) { return E4(x) - K4(x); };
+  var p = Plot({ W: 600, H: 500, m: { l: 30, r: 26, t: 26, b: 12 }, x0: -0.8, x1: 15.2, y0: -10.6, y1: 11.6, gx: 1, gy: 2, xt: [2, 4, 6, 8, 10, 12, 14], yt: [-8, -4, 4, 8] });
+  p.band(0, 1.5, 'rgba(192,57,43,.09)', 6); p.band(10, 14, 'rgba(192,57,43,.09)', 6); p.band(1.5, 10, 'rgba(26,122,74,.10)', 6);
+  p.s.push.apply(p.s, p.s.splice(0, 3)); /* Bänder hinter Gitter und Achsen legen */
+  p.seg(0, 14, C.ax, 1);
+  p.dash(1.5, 0, 1.5, 3.75, C.mut, 2); p.dash(0, 3.75, 1.5, 3.75, C.mut, 2);
+  p.dash(10, 0, 10, 8, C.mut, 2); p.dash(0, 8, 10, 8, C.mut, 2);
+  p.dash(5.75, 0, 5.75, 3.6125, C.G, 3); p.dash(0, 3.6125, 5.75, 3.6125, C.G, 3);
+  p.dash(7, 0, 7, 9.8, C.E, 4); p.dash(0, 9.8, 7, 9.8, C.E, 4);
+  p.curve(K4, 0, 14, C.K); p.curve(E4, 0, 14, C.E); p.curve(G4, 0, 14, C.G);
+  p.dot(1.5, 3.75, C.ax); p.dot(10, 8, C.ax); p.dot(5.75, 3.6125, C.ax); p.dot(7, 9.8, C.ax);
+  p.text(1.75, 2.75, 'A', C.ax); p.text(9.55, 6.9, 'B', C.ax); p.text(5.55, 4.25, 'C', C.ax); p.text(7.3, 8.95, 'D', C.ax);
+  p.text(0.02, -0.75, 'O', C.mut, 0, { a: 'end', size: 12, w: 400 });
+  p.text(12.9, 4.6, 'E', C.E, 1, { size: 17 }); p.text(12.9, 10.3, 'K', C.K, 1, { size: 17, a: 'end' }); p.text(12.2, -3.4, 'G', C.G, 1, { size: 17 });
+  p.text(15.1, -1.9, 'x in ME', C.ax, 1, { a: 'end', size: 13 }); p.text(0.3, 11.0, '<tspan style="fill:' + C.K + '">K(x)</tspan>, <tspan style="fill:' + C.E + '">E(x)</tspan>, <tspan style="fill:' + C.G + '">G(x)</tspan> in GE', C.ax, 1, { size: 13 });
+  p.text(5.75, -2.3, 'D<tspan baseline-shift="sub" font-size="10">ök</tspan> = [0; 14]', C.ax, 1, { a: 'middle', size: 13 });
+  p.text(5.75, -9.2, 'Gewinn', C.G, 6, { a: 'middle' }); p.text(0.75, -9.2, 'Verlust', C.K, 6, { a: 'middle', size: 11 }); p.text(11.3, -9.2, 'Verlust', C.K, 6, { a: 'middle' });
+  document.getElementById('svg4').innerHTML = p.out('Graphen von Erlös, Kosten und Gewinn der Köche-Serie');
+
+  /* ---------- Aufgabe 5 ---------- */
+  var E5 = function (x) { return -0.3 * x * x + 27 * x; }, K5 = function (x) { return 3 * x + 360; }, G5 = function (x) { return E5(x) - K5(x); }, P5 = function (x) { return -0.3 * x + 27; };
+  var q = Plot({ W: 600, H: 500, m: { l: 46, r: 26, t: 26, b: 12 }, x0: -4, x1: 99, y0: -700, y1: 720, gx: 10, gy: 100, xt: [10, 20, 30, 40, 50, 60, 70, 80, 90], yt: [-600, -400, -200, 200, 400, 600] });
+  q.seg(0, 90, C.ax, 4);
+  q.text(98, -150, 'x in ME', C.ax, 0, { a: 'end', size: 13 }); q.text(2, 690, '<tspan style="fill:' + C.K + '">K(x)</tspan>, <tspan style="fill:' + C.E + '">E(x)</tspan>, <tspan style="fill:' + C.G + '">G(x)</tspan> in GE', C.ax, 0, { size: 13 });
+  q.text(45, -110, 'D<tspan baseline-shift="sub" font-size="10">ök</tspan> = [0; 90]', C.ax, 4, { a: 'middle', size: 13 });
+  q.dash(20, 0, 20, 420, C.mut, 5); q.dash(60, 0, 60, 540, C.mut, 5);
+  q.dash(40, 0, 40, 120, C.G, 6);
+  q.curve(K5, 0, 90, C.K, 5); q.curve(E5, 0, 90, C.E, 5); q.curve(G5, 0, 90, C.G, 5);
+  q.dot(20, 420, C.ax, 5); q.dot(60, 540, C.ax, 5); q.dot(20, 0, C.G, 5); q.dot(60, 0, C.G, 5);
+  q.dot(40, 120, C.G, 6); q.text(42, 150, 'G(40) = 120', C.G, 6, { size: 12 });
+  q.text(77, 400, 'E', C.E, 5, { size: 17 }); q.text(80, 660, 'K', C.K, 5, { size: 17, a: 'end' }); q.text(75, -150, 'G', C.G, 5, { size: 17 });
+  document.getElementById('svg5').innerHTML = q.out('Graphen von Erlös, Kosten und Gewinn der Serie Klassik');
+
+  var r = Plot({ W: 600, H: 230, m: { l: 46, r: 26, t: 22, b: 30 }, x0: -4, x1: 99, y0: -2, y1: 32, gx: 10, gy: 5, xt: [20, 40, 60, 80], yt: [10, 20, 30] });
+  r.dash(40, 0, 40, 15, C.P); r.dash(0, 15, 40, 15, C.P);
+  r.curve(P5, 0, 90, C.P); r.dot(40, 15, C.ax);
+  r.text(42, 17.5, 'C(40 | 15)', C.ax); r.text(72, 8.5, 'p', C.P, 0, { size: 17 });
+  r.text(98, 3.2, 'x in ME', C.ax, 0, { a: 'end', size: 13 }); r.text(2, 30, 'p(x) in GE/ME', C.ax, 0, { size: 13 });
+  document.getElementById('svgP').innerHTML = r.out('Preis-Absatzfunktion mit Cournot-Punkt');
+
+  /* ---------- Steuerung ---------- */
+  var boards = [].slice.call(document.querySelectorAll('.board'));
+  var tabs = [].slice.call(document.querySelectorAll('.tab'));
+  function current() { return boards.filter(function (b) { return !b.hidden; })[0]; }
+  function sync(board) {
+    var open = {};
+    [].forEach.call(board.querySelectorAll('.step'), function (st) {
+      var on = st.classList.contains('open');
+      open[st.dataset.step] = on;
+      st.querySelector('.step-head').setAttribute('aria-expanded', on);
+      st.querySelector('.state').textContent = on ? 'sichtbar' : 'verdeckt';
+    });
+    [].forEach.call(board.querySelectorAll('[data-layer]'), function (el) {
+      el.classList.toggle('off', !open[el.getAttribute('data-layer')]);
+    });
+    var left = board.querySelectorAll('.step:not(.open)').length;
+    document.getElementById('next').disabled = !left;
+    document.getElementById('next').style.opacity = left ? 1 : .45;
+  }
+  function show(id) {
+    boards.forEach(function (b) { b.hidden = b.id !== id; });
+    tabs.forEach(function (t) { t.setAttribute('aria-selected', t.dataset.board === id); });
+    sync(current());
+  }
+  tabs.forEach(function (t) { t.addEventListener('click', function () { location.hash = t.dataset.board; show(t.dataset.board); }); });
+  document.querySelectorAll('.step-head').forEach(function (h) {
+    h.addEventListener('click', function () { h.parentNode.classList.toggle('open'); sync(current()); });
+  });
+  document.getElementById('next').addEventListener('click', function () {
+    var st = current().querySelector('.step:not(.open)');
+    if (st) { st.classList.add('open'); sync(current()); st.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  });
+  document.getElementById('all').addEventListener('click', function () {
+    current().querySelectorAll('.step').forEach(function (s) { s.classList.add('open'); }); sync(current());
+  });
+  document.getElementById('none').addEventListener('click', function () {
+    current().querySelectorAll('.step').forEach(function (s) { s.classList.remove('open'); }); sync(current());
+  });
+  var casBtn = document.getElementById('cas');
+  casBtn.addEventListener('click', function () {
+    var off = document.body.classList.toggle('no-cas');
+    casBtn.setAttribute('aria-pressed', !off);
+  });
+  function fromHash() { show(location.hash === '#aufgabe-5' ? 'aufgabe-5' : 'aufgabe-4'); }
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>
+</body>
+</html>
