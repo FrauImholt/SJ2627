@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parabel-Treffer – BBS 1 Delmenhorst</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: links das Koordinatensystem mit Ziel- und eigener Parabel, rechts Level, Regler und Rückmeldung. BBS1-Schema, nur hell. */
+  :root {
+    color-scheme: light;
+    --bg: #f0f4f8; --surface: #ffffff; --card: #ffffff; --border: #c8d6e5;
+    --accent: #1a4f8c; --accent2: #2874a6; --tint: #eef4fb;
+    --green: #1a7a4a; --red: #c0392b; --yellow: #b7770d; --target: #d35400;
+    --text: #1c2833; --muted: #5d6d7e;
+    --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --serif: 'DM Serif Display', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.45; -webkit-text-size-adjust: 100%; }
+  header { background: linear-gradient(135deg, #1a4f8c 0%, #2874a6 100%); border-bottom: 1px solid #154070; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header img { height: 42px; border-radius: 6px; background: #fff; padding: 4px; }
+  header h1 { font-family: var(--serif); font-weight: 400; font-size: 1.5rem; line-height: 1.1; }
+  header p { color: #b8d4f0; font-size: .8rem; }
+  .live-pts { margin-left: auto; background: #fff; color: var(--accent); border-radius: 10px; padding: 6px 16px; font-family: var(--mono); font-weight: 600; font-size: 1rem; white-space: nowrap; }
+
+  .levels { background: #e8eef5; border-bottom: 2px solid var(--border); padding: 8px 20px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+  .stage { display: flex; align-items: center; gap: 6px; }
+  .stage span { font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .chip { min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: 600 .95rem var(--sans); cursor: pointer; }
+  .chip:hover { border-color: var(--accent); }
+  .chip.cur { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip.done { background: #eafaf1; border-color: #a9dfbf; color: var(--green); }
+  .chip.done.cur { background: var(--green); border-color: var(--green); color: #fff; }
+  :focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
+
+  main { max-width: 1240px; margin: 0 auto; padding: 16px 20px 32px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 13px; box-shadow: 0 1px 4px rgba(26,79,140,.07); }
+  .pad { padding: 14px 16px; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+  svg text { font-family: var(--sans); }
+  .key { display: flex; gap: 18px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); padding: 6px 4px 0; }
+  .key i { display: inline-block; width: 26px; height: 0; border-top: 3px solid var(--accent); vertical-align: middle; margin-right: 6px; }
+  .key i.t { border-top: 4px dashed var(--target); }
+
+  .lv-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .lv-head h2 { font-size: 1.15rem; }
+  .badge { font-size: .72rem; font-weight: 700; border-radius: 99px; padding: 2px 10px; background: var(--tint); color: var(--accent); border: 1px solid var(--border); }
+  .badge.star { background: #fef9e7; color: var(--yellow); border-color: #f9e79f; }
+  .task { margin-top: 6px; font-size: 1rem; }
+  .form { margin-top: 10px; background: var(--tint); border: 1px solid var(--accent); border-radius: 10px; padding: 8px 12px; }
+  .form .gen { font-size: .85rem; color: var(--muted); }
+  .form .cur { font-size: 1.25rem; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .form i, .task i, .q i, .cheat i, .steck i { font-family: Georgia, 'Times New Roman', serif; }
+
+  .ctrl { display: grid; grid-template-columns: 2.4rem 44px minmax(0, 1fr) 44px 4.2rem; gap: 8px; align-items: center; margin-top: 10px; }
+  .ctrl label { font: italic 600 1.2rem Georgia, serif; text-align: center; }
+  .ctrl .val { font-family: var(--mono); font-weight: 600; font-size: 1rem; text-align: right; }
+  .ctrl.locked { opacity: .5; }
+  .ctrl.locked .val::after { content: " fest"; font-family: var(--sans); font-weight: 400; font-size: .7rem; color: var(--muted); }
+  .step { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: 1.4rem; font-weight: 600; color: var(--accent); cursor: pointer; }
+  .step:disabled, input[type=range]:disabled { cursor: default; }
+  input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .btn { font: 600 1rem var(--sans); padding: 11px 20px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; min-height: 44px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: var(--surface); color: var(--muted); border-color: var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn:disabled { opacity: .45; cursor: default; }
+
+  .fb { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: .95rem; }
+  .fb.ok { background: #eafaf1; color: var(--green); border: 1px solid #a9dfbf; }
+  .fb.err { background: #fdedec; color: var(--red); border: 1px solid #f5b7b1; }
+  .fb.inf { background: #fef9e7; color: #7a5208; border: 1px solid #f9e79f; }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .checks span { border-radius: 99px; padding: 2px 10px; font-size: .82rem; font-weight: 600; background: #fff; border: 1px solid currentColor; }
+  .checks .y { color: var(--green); } .checks .n { color: var(--red); }
+
+  .steck { font-size: .9rem; color: var(--muted); display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; }
+  .steck b { color: var(--text); font-weight: 600; }
+  .q h3 { font-size: 1rem; }
+  .q .opt { display: block; width: 100%; text-align: left; margin-top: 8px; padding: 11px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font: 500 .98rem var(--sans); cursor: pointer; min-height: 44px; }
+  .q .opt:hover:not(:disabled) { border-color: var(--accent); background: #e8f0fa; }
+  .q .opt.correct { background: #eafaf1; border-color: var(--green); color: var(--green); }
+  .q .opt.wrong { background: #fdedec; border-color: var(--red); color: var(--red); }
+  details.cheat summary { cursor: pointer; font-weight: 600; color: var(--accent); min-height: 28px; }
+  .cheat table { border-collapse: collapse; width: 100%; margin-top: 8px; font-size: .88rem; }
+  .cheat th, .cheat td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; vertical-align: top; }
+  .cheat th { background: #d5e3f0; }
+  .cheat p { font-size: .88rem; margin-top: 8px; }
+  footer { max-width: 1240px; margin: 0 auto; padding: 0 20px 20px; color: var(--muted); font-size: .78rem; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+  footer button { font: 500 .78rem var(--sans); color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <img src="data:image/jpeg;base64,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" alt="Logo BBS 1 Delmenhorst">
+  <div>
+    <h1>Parabel-Treffer</h1>
+    <p>Mathematik · BGW 1 · Darstellungsformen quadratischer Funktionen</p>
+  </div>
+  <div class="live-pts" id="pts" aria-live="polite">0 / 52 Punkte</div>
+</header>
+
+<nav class="levels" id="levels" aria-label="Level"></nav>
+
+<main>
+  <div class="col">
+    <div class="card pad">
+      <div id="plot"></div>
+      <div class="key"><span><i class="t"></i>Zielparabel</span><span><i></i>deine Parabel</span></div>
+    </div>
+    <div class="card pad" id="steckCard">
+      <div class="steck" id="steck"></div>
+    </div>
+    <details class="card pad cheat">
+      <summary>Spickzettel: drei Darstellungsformen</summary>
+      <table>
+        <tr><th>Form</th><th>Term</th><th>direkt ablesbar</th></tr>
+        <tr><td>Scheitelpunktform</td><td><i>f</i>(<i>x</i>) = <i>a</i>(<i>x</i> − <i>u</i>)² + <i>v</i></td><td>Scheitelpunkt S(<i>u</i> | <i>v</i>)</td></tr>
+        <tr><td>Linearfaktorform</td><td><i>f</i>(<i>x</i>) = <i>a</i>(<i>x</i> − <i>x</i>₁)(<i>x</i> − <i>x</i>₂)</td><td>Nullstellen <i>x</i>₁ und <i>x</i>₂</td></tr>
+        <tr><td>Normalform</td><td><i>f</i>(<i>x</i>) = <i>ax</i>² + <i>bx</i> + <i>c</i></td><td><i>y</i>-Achsenabschnitt <i>c</i></td></tr>
+      </table>
+      <p><b>Parameter <i>a</i>:</b> <i>a</i> &gt; 0 nach oben geöffnet, <i>a</i> &lt; 0 nach unten geöffnet. |<i>a</i>| &gt; 1 gestreckt (schmaler), |<i>a</i>| &lt; 1 gestaucht (breiter).</p>
+      <p><b>Parameter <i>u</i> und <i>v</i>:</b> <i>u</i> verschiebt in <i>x</i>-Richtung, <i>v</i> in <i>y</i>-Richtung. Achtung: (<i>x</i> + 3)² bedeutet <i>u</i> = −3, also 3 nach links.</p>
+    </details>
+  </div>
+
+  <div class="col">
+    <div class="card pad">
+      <div class="lv-head"><h2 id="lvTitle"></h2><span class="badge" id="lvBadge"></span></div>
+      <p class="task" id="lvTask"></p>
+      <div class="form"><div class="gen" id="fGen"></div><div class="cur" id="fCur"></div></div>
+      <div id="ctrls"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="check">Prüfen</button>
+        <button class="btn btn-ghost" id="hint">Tipp (kostet 1 Punkt)</button>
+      </div>
+      <div id="fb" aria-live="polite"></div>
+    </div>
+    <div class="card pad q" id="qCard" hidden>
+      <h3 id="qText"></h3>
+      <div id="qOpts"></div>
+      <div id="qFb"></div>
+      <div class="actions"><button class="btn btn-success" id="next" hidden>Nächstes Level</button></div>
+    </div>
+    <div class="card pad" id="endCard" hidden></div>
+  </div>
+</main>
+
+<footer><span>BBS 1 Delmenhorst · Handelslehranstalten · Mathematik BGW 1</span><button id="reset">Spielstand löschen</button></footer>
+
+<script>
+(function () {
+  var I = function (s) { return '<i>' + s + '</i>'; };
+  var GEN = {
+    spf: I('f') + '(' + I('x') + ') = ' + I('a') + ' · (' + I('x') + ' − ' + I('u') + ')² + ' + I('v'),
+    lff: I('f') + '(' + I('x') + ') = ' + I('a') + ' · (' + I('x') + ' − ' + I('x') + '₁) · (' + I('x') + ' − ' + I('x') + '₂)',
+    nf: I('f') + '(' + I('x') + ') = ' + I('a') + I('x') + '² + ' + I('b') + I('x') + ' + ' + I('c')
+  };
+  var ORDER = { spf: ['a', 'd', 'e'], lff: ['a', 'x1', 'x2'], nf: ['a', 'b', 'c'] };
+  var LABEL = { a: 'a', d: 'u', e: 'v', x1: 'x₁', x2: 'x₂', b: 'b', c: 'c' };
+  var FORMNAME = { spf: 'Scheitelpunktform', lff: 'Linearfaktorform', nf: 'Normalform' };
+  var VIEW = { x0: -8, x1: 8, y0: -8, y1: 8, xl: 'x', yl: 'y' };
+  var WM = { x0: -1, x1: 16, y0: -5, y1: 12, xl: 'x in ME', yl: 'in GE' };
+  var RWM = { a: [-1, 1, 0.1], x1: [0, 16, 0.5], x2: [0, 16, 0.5] };
+
+  var LV = [
+    { st: 'Scheitelpunktform', form: 'spf', free: ['e'], start: { a: 1, d: 0, e: 0 }, target: { a: 1, d: 0, e: -3 },
+      task: 'Verschiebe die Normalparabel so, dass sie auf der Zielparabel liegt.', hint: 'Die Zielparabel hat dieselbe Form wie die Normalparabel, ihr Scheitelpunkt liegt aber tiefer.',
+      q: { t: 'Welche Wirkung hat der Parameter ' + I('v') + ' in ' + I('f') + '(' + I('x') + ') = ' + I('a') + '(' + I('x') + ' − ' + I('u') + ')² + ' + I('v') + '?', o: ['Verschiebung in y-Richtung', 'Verschiebung in x-Richtung', 'Streckung oder Stauchung'], e: 'Der Parameter v verschiebt die Parabel nach oben (v > 0) oder nach unten (v < 0).' } },
+    { st: 'Scheitelpunktform', form: 'spf', free: ['d'], start: { a: 1, d: 0, e: 0 }, target: { a: 1, d: -3, e: 0 },
+      task: 'Verschiebe die Normalparabel in x-Richtung auf die Zielparabel. Achte im Term auf das Vorzeichen.', hint: 'Lies die Scheitelstelle der Zielparabel ab. Dieser Wert ist u.',
+      q: { t: 'Wohin ist die Normalparabel bei ' + I('f') + '(' + I('x') + ') = (' + I('x') + ' + 3)² verschoben?', o: ['um 3 nach links', 'um 3 nach rechts', 'um 3 nach oben'], e: '(x + 3)² = (x − (−3))², also u = −3: Verschiebung um 3 nach links.' } },
+    { st: 'Scheitelpunktform', form: 'spf', free: ['a'], start: { a: 1, d: 0, e: 0 }, target: { a: -0.5, d: 0, e: 0 },
+      task: 'Verändere nur den Parameter a, bis die Parabeln deckungsgleich sind.', hint: 'Die Zielparabel ist nach unten geöffnet und breiter als die Normalparabel.',
+      q: { t: 'Was bewirkt ' + I('a') + ' = −0,5 im Vergleich zur Normalparabel?', o: ['nach unten geöffnet und gestaucht', 'nach unten geöffnet und gestreckt', 'nach oben geöffnet und gestaucht'], e: 'a < 0: nach unten geöffnet. |a| < 1: gestaucht, die Parabel wird breiter.' } },
+    { st: 'Scheitelpunktform', form: 'spf', free: ['a', 'd', 'e'], start: { a: 1, d: 0, e: 0 }, target: { a: 2, d: 1, e: -4 },
+      task: 'Jetzt alle drei Parameter: Triff die Zielparabel.', hint: 'Lies zuerst den Scheitelpunkt ab (u und v). Gehe dann vom Scheitel 1 nach rechts: Um wie viel steigt die Parabel? Das ist a.',
+      q: { t: 'Wo liegt der Scheitelpunkt von ' + I('f') + '(' + I('x') + ') = 2(' + I('x') + ' − 1)² − 4?', o: ['S(1 | −4)', 'S(−1 | −4)', 'S(1 | 4)'], e: 'Aus a(x − u)² + v liest man S(u | v) ab, hier u = 1 und v = −4.' } },
+    { st: 'Scheitelpunktform', star: 1, form: 'spf', free: ['a', 'd', 'e'], start: { a: 1, d: 0, e: 0 }, target: { a: -0.5, d: -2, e: 5 },
+      task: 'Erweiterung ohne Steckbrief: Triff die Zielparabel.', hint: 'Scheitelpunkt ablesen. Vom Scheitel 2 nach rechts fällt die Parabel um 2, also gilt a · 2² = −2.',
+      q: { t: 'Wie viele Nullstellen hat ' + I('f') + '(' + I('x') + ') = −0,5(' + I('x') + ' + 2)² + 5?', o: ['zwei', 'eine', 'keine'], e: 'Der Scheitel S(−2 | 5) liegt über der x-Achse und die Parabel ist nach unten geöffnet. Sie schneidet die x-Achse zweimal.' } },
+
+    { st: 'Linearfaktorform', form: 'lff', free: ['x1', 'x2'], start: { a: 1, x1: 0, x2: 0 }, target: { a: 1, x1: -1, x2: 3 },
+      task: 'Stelle die beiden Nullstellen so ein, dass die Parabeln deckungsgleich sind.', hint: 'Lies ab, wo die Zielparabel die x-Achse schneidet.',
+      q: { t: 'Welche Nullstellen hat ' + I('f') + '(' + I('x') + ') = (' + I('x') + ' + 1)(' + I('x') + ' − 3)?', o: ['−1 und 3', '1 und −3', '1 und 3'], e: 'Ein Produkt ist null, wenn ein Faktor null ist: x + 1 = 0 oder x − 3 = 0.' } },
+    { st: 'Linearfaktorform', form: 'lff', free: ['a', 'x1', 'x2'], start: { a: 1, x1: 0, x2: 0 }, target: { a: -0.5, x1: -4, x2: 2 },
+      task: 'Nullstellen und Öffnung: Triff die Zielparabel.', hint: 'Erst die Nullstellen einstellen. Dann a so wählen, dass der Scheitel passt.',
+      q: { t: 'Wo liegt die Scheitelstelle von ' + I('f') + '(' + I('x') + ') = −0,5(' + I('x') + ' + 4)(' + I('x') + ' − 2)?', o: ['bei x = −1', 'bei x = 1', 'bei x = −3'], e: 'Die Scheitelstelle liegt in der Mitte der Nullstellen: (−4 + 2) : 2 = −1.' } },
+    { st: 'Linearfaktorform', star: 1, form: 'lff', free: ['a', 'x1', 'x2'], start: { a: 1, x1: 0, x2: 0 }, target: { a: 0.5, x1: 3, x2: 3 },
+      task: 'Erweiterung ohne Steckbrief: Ein Sonderfall. Triff die Zielparabel.', hint: 'Die Zielparabel berührt die x-Achse nur an einer Stelle. Beide Nullstellen fallen zusammen.',
+      q: { t: 'Was gilt, wenn in der Linearfaktorform ' + I('x') + '₁ = ' + I('x') + '₂ ist?', o: ['Die Parabel berührt die x-Achse im Scheitelpunkt.', 'Die Parabel hat keine Nullstelle.', 'Die Parabel schneidet die x-Achse zweimal.'], e: 'Man spricht von einer doppelten Nullstelle. Der Scheitelpunkt liegt auf der x-Achse.' } },
+
+    { st: 'Normalform', form: 'nf', free: ['c'], start: { a: 1, b: 2, c: 0 }, target: { a: 1, b: 2, c: -3 },
+      task: 'Verändere nur c, bis die Parabeln deckungsgleich sind.', hint: 'Schau auf die Stelle x = 0: Wo schneidet die Zielparabel die y-Achse?',
+      q: { t: 'Was gibt ' + I('c') + ' in ' + I('f') + '(' + I('x') + ') = ' + I('ax') + '² + ' + I('bx') + ' + ' + I('c') + ' an?', o: ['den y-Achsenabschnitt', 'die Scheitelstelle', 'eine Nullstelle'], e: 'f(0) = c. Der Graph schneidet die y-Achse im Punkt (0 | c).' } },
+    { st: 'Normalform', form: 'nf', free: ['b', 'c'], start: { a: 1, b: 0, c: 0 }, target: { a: 1, b: -4, c: 3 },
+      task: 'Stelle b und c ein. Beobachte, wie b den Scheitelpunkt wandern lässt.', hint: 'Stelle zuerst c über den y-Achsenabschnitt ein. Verändere dann b, bis die Nullstellen passen.',
+      q: { t: 'Welche Linearfaktorform gehört zu ' + I('f') + '(' + I('x') + ') = ' + I('x') + '² − 4' + I('x') + ' + 3?', o: ['(x − 1)(x − 3)', '(x + 1)(x + 3)', '(x − 4)(x + 3)'], e: 'Die Nullstellen sind 1 und 3. Probe: (x − 1)(x − 3) = x² − 4x + 3.' } },
+    { st: 'Normalform', star: 1, form: 'nf', free: ['a', 'b', 'c'], start: { a: 1, b: 0, c: 0 }, target: { a: -0.5, b: 2, c: 2 },
+      task: 'Erweiterung ohne Steckbrief: Triff die Zielparabel mit a, b und c.', hint: 'c ist der y-Achsenabschnitt. Die Öffnung liefert a. Mit b bringst du den Scheitel an die richtige Stelle.',
+      q: { t: 'Welche Scheitelpunktform gehört zu ' + I('f') + '(' + I('x') + ') = −0,5' + I('x') + '² + 2' + I('x') + ' + 2?', o: ['−0,5(x − 2)² + 4', '−0,5(x + 2)² + 4', '−0,5(x − 2)² + 2'], e: 'Der Scheitelpunkt ist S(2 | 4). Probe: −0,5(x − 2)² + 4 = −0,5x² + 2x + 2.' } },
+
+    { st: 'Wäsche Max', form: 'lff', free: ['a', 'x1', 'x2'], start: { a: -0.5, x1: 2, x2: 8 }, target: { a: -0.2, x1: 0, x2: 14 }, view: WM, r: RWM,
+      task: 'Die Zielparabel ist die Erlösfunktion E der Köche-Serie. Stelle sie in Linearfaktorform ein.', hint: 'Der Erlös ist bei 0 ME und bei 14 ME gleich 0 GE. Der größte Erlös beträgt 9,8 GE.',
+      q: { t: 'Was bedeutet die Nullstelle ' + I('x') + ' = 14 der Erlösfunktion?', o: ['Sättigungsmenge: Bei 14 ME ist der Erlös 0 GE.', 'Gewinnschwelle: Ab 14 ME wird Gewinn erzielt.', 'Bei 14 ME ist der Erlös am größten.'], e: 'Bei der Sättigungsmenge ist der Preis auf 0 gefallen, der Erlös beträgt 0 GE. Der ökonomisch sinnvolle Bereich ist [0; 14].' } },
+    { st: 'Wäsche Max', star: 1, form: 'lff', free: ['a', 'x1', 'x2'], start: { a: -0.5, x1: 2, x2: 8 }, target: { a: -0.2, x1: 1.5, x2: 10 }, view: WM, r: RWM,
+      task: 'Erweiterung ohne Steckbrief: Die Zielparabel ist die Gewinnfunktion G der Köche-Serie.', hint: 'Lies die beiden Nullstellen genau ab (halbe Kästchen beachten). Die Öffnung ist dieselbe wie bei der Erlösfunktion.',
+      q: { t: 'Was bedeuten die Nullstellen der Gewinnfunktion?', o: ['Gewinnschwelle und Gewinngrenze', 'Fixkosten und variable Kosten', 'Sättigungsmenge und Höchstpreis'], e: 'Zwischen Gewinnschwelle (1,5 ME) und Gewinngrenze (10 ME) ist G(x) > 0: Das Unternehmen erzielt Gewinn.' } }
+  ];
+  /* richtige Antwort ist jeweils die erste Option; Anzeige in fester, gemischter Reihenfolge */
+  var PERM = [[1, 0, 2], [2, 1, 0], [0, 2, 1], [1, 2, 0], [2, 0, 1], [0, 1, 2]];
+
+  var KEY = 'parabel-treffer-sj2627';
+  var save = { pts: [], q: [] };
+  try { var raw = localStorage.getItem(KEY); if (raw) save = JSON.parse(raw); } catch (e) {}
+  function store() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+  var cur = 0, P = {}, tries = 0, hinted = false;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function num(v) { v = Math.round(v * 1000) / 1000; return (v < 0 ? '−' : '') + String(Math.abs(v)).replace('.', ','); }
+  function f(form, p, x) {
+    if (form === 'spf') return p.a * (x - p.d) * (x - p.d) + p.e;
+    if (form === 'lff') return p.a * (x - p.x1) * (x - p.x2);
+    return p.a * x * x + p.b * x + p.c;
+  }
+  function feat(form, p) {
+    var xs = form === 'spf' ? p.d : form === 'lff' ? (p.x1 + p.x2) / 2 : (p.a ? -p.b / (2 * p.a) : 0);
+    return { a: p.a, xs: xs, ys: f(form, p, xs) };
+  }
+  function eq(u, v) { return Math.abs(u - v) < 1e-6; }
+  function aPre(a) { return a === 1 ? '' : a === -1 ? '−' : num(a) + ' · '; }
+  function plus(v, unit) { return v === 0 ? '' : (v > 0 ? ' + ' : ' − ') + num(Math.abs(v)) + (unit || ''); }
+  function fac(x0) { return x0 === 0 ? I('x') : '(' + I('x') + (x0 > 0 ? ' − ' : ' + ') + num(Math.abs(x0)) + ')'; }
+  function term(form, p) {
+    var s = I('f') + '(' + I('x') + ') = ';
+    if (form === 'spf') return s + aPre(p.a) + (p.d === 0 ? I('x') + '²' : fac(p.d) + '²') + plus(p.e);
+    if (form === 'lff') return s + aPre(p.a) + fac(p.x1) + ' · ' + fac(p.x2);
+    var t = (p.a === 1 ? '' : p.a === -1 ? '−' : num(p.a)) + I('x') + '²';
+    if (p.b !== 0) t += (p.b > 0 ? ' + ' : ' − ') + (Math.abs(p.b) === 1 ? '' : num(Math.abs(p.b))) + I('x');
+    return s + t + plus(p.c);
+  }
+
+  function draw() {
+    var L = LV[cur], v = L.view || VIEW, W = 560, H = 560, m = 14, s = [];
+    var sx = function (x) { return m + (x - v.x0) / (v.x1 - v.x0) * (W - 2 * m); };
+    var sy = function (y) { return H - m - (y - v.y0) / (v.y1 - v.y0) * (H - 2 * m); };
+    var i;
+    for (i = Math.ceil(v.x0); i <= v.x1; i++) s.push('<line x1="' + sx(i) + '" x2="' + sx(i) + '" y1="' + m + '" y2="' + (H - m) + '" stroke="#dbe5ef"/>');
+    for (i = Math.ceil(v.y0); i <= v.y1; i++) s.push('<line y1="' + sy(i) + '" y2="' + sy(i) + '" x1="' + m + '" x2="' + (W - m) + '" stroke="#dbe5ef"/>');
+    s.push('<line x1="' + m + '" x2="' + (W - m + 4) + '" y1="' + sy(0) + '" y2="' + sy(0) + '" stroke="#1c2833" stroke-width="1.6" marker-end="url(#arr)"/>');
+    s.push('<line x1="' + sx(0) + '" x2="' + sx(0) + '" y1="' + (H - m) + '" y2="' + (m - 4) + '" stroke="#1c2833" stroke-width="1.6" marker-end="url(#arr)"/>');
+    for (i = Math.ceil(v.x0 / 2) * 2; i < v.x1; i += 2) if (i !== 0) s.push('<text x="' + sx(i) + '" y="' + (sy(0) + 17) + '" font-size="13" text-anchor="middle" fill="#5d6d7e">' + num(i) + '</text>');
+    for (i = Math.ceil(v.y0 / 2) * 2; i < v.y1; i += 2) if (i !== 0) s.push('<text x="' + (sx(0) - 7) + '" y="' + (sy(i) + 4) + '" font-size="13" text-anchor="end" fill="#5d6d7e">' + num(i) + '</text>');
+    s.push('<text x="' + (W - m - 2) + '" y="' + (sy(0) - 9) + '" font-size="14" font-weight="600" text-anchor="end" fill="#1c2833">' + v.xl + '</text>');
+    s.push('<text x="' + (sx(0) + 9) + '" y="' + (m + 12) + '" font-size="14" font-weight="600" fill="#1c2833">' + v.yl + '</text>');
+    function path(p, attr) {
+      var d = '', n = 240, k, x, y;
+      for (k = 0; k <= n; k++) { x = v.x0 + (v.x1 - v.x0) * k / n; y = Math.max(-1e4, Math.min(1e4, f(L.form, p, x))); d += (k ? 'L' : 'M') + sx(x).toFixed(1) + ' ' + sy(y).toFixed(1); }
+      s.push('<path d="' + d + '" fill="none" clip-path="url(#clip)" ' + attr + '/>');
+    }
+    var done = save.pts[cur] != null;
+    path(L.target, 'stroke="#d35400" stroke-width="5" stroke-dasharray="10 7" stroke-linecap="round" opacity=".75"');
+    path(P, 'stroke="' + (done ? '#1a7a4a' : '#1a4f8c') + '" stroke-width="3" stroke-linecap="round"');
+    $('plot').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Koordinatensystem mit Zielparabel und eigener Parabel"><defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1c2833"/></marker><clipPath id="clip"><rect x="' + m + '" y="' + m + '" width="' + (W - 2 * m) + '" height="' + (H - 2 * m) + '"/></clipPath></defs>' + s.join('') + '</svg>';
+  }
+
+  function steck() {
+    var L = LV[cur], done = save.pts[cur] != null;
+    if (L.star && !done) { $('steckCard').hidden = true; return; }
+    $('steckCard').hidden = false;
+    var ft = feat(L.form, P), z, r;
+    if (P.a === 0) { $('steck').innerHTML = '<b>Deine Parabel</b><span>Mit a = 0 entsteht keine Parabel, sondern eine Gerade.</span>'; return; }
+    r = -ft.ys / P.a;
+    z = eq(r, 0) ? num(ft.xs) + ' (doppelt)' : r > 0 ? num(ft.xs - Math.sqrt(r)) + ' und ' + num(ft.xs + Math.sqrt(r)) : 'keine';
+    $('steck').innerHTML = '<b>Deine Parabel</b><span></span>' +
+      '<span>Scheitelpunkt</span><b>S(' + num(ft.xs) + ' | ' + num(ft.ys) + ')</b>' +
+      '<span>Nullstellen</span><b>' + z + '</b>' +
+      '<span>y-Achsenabschnitt</span><b>' + num(f(L.form, P, 0)) + '</b>' +
+      '<span>Öffnung</span><b>' + (P.a > 0 ? 'nach oben' : 'nach unten') + (Math.abs(P.a) > 1 ? ', gestreckt' : Math.abs(P.a) < 1 ? ', gestaucht' : '') + '</b>';
+  }
+
+  function range(L, k) { return (L.r && L.r[k]) || (k === 'a' ? [-3, 3, 0.25] : [-6, 6, 1]); }
+  function controls() {
+    var L = LV[cur], done = save.pts[cur] != null, h = '';
+    ORDER[L.form].forEach(function (k) {
+      var r = range(L, k), lock = L.free.indexOf(k) < 0, dis = (lock || done) ? ' disabled' : '';
+      h += '<div class="ctrl' + (lock ? ' locked' : '') + '"><label for="r-' + k + '">' + LABEL[k] + '</label>' +
+        '<button class="step" data-k="' + k + '" data-s="-1" aria-label="' + LABEL[k] + ' verkleinern"' + dis + '>−</button>' +
+        '<input type="range" id="r-' + k + '" data-k="' + k + '" min="' + r[0] + '" max="' + r[1] + '" step="' + r[2] + '" value="' + P[k] + '"' + dis + '>' +
+        '<button class="step" data-k="' + k + '" data-s="1" aria-label="' + LABEL[k] + ' vergrößern"' + dis + '>+</button>' +
+        '<span class="val" id="v-' + k + '">' + num(P[k]) + '</span></div>';
+    });
+    $('ctrls').innerHTML = h;
+  }
+  function setP(k, val) {
+    var r = range(LV[cur], k);
+    val = Math.max(r[0], Math.min(r[1], Math.round(val * 100) / 100));
+    P[k] = val; $('r-' + k).value = val; $('v-' + k).textContent = num(val);
+    $('fCur').innerHTML = term(LV[cur].form, P); draw(); steck();
+  }
+  $('ctrls').addEventListener('input', function (ev) { var k = ev.target.dataset.k; if (k) setP(k, parseFloat(ev.target.value)); });
+  $('ctrls').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.step'); if (!b) return;
+    setP(b.dataset.k, P[b.dataset.k] + parseInt(b.dataset.s, 10) * range(LV[cur], b.dataset.k)[2]);
+  });
+
+  function total() { var t = 0; LV.forEach(function (_, i) { t += (save.pts[i] || 0) + (save.q[i] === 1 ? 1 : 0); }); return t; }
+  function levelBar() {
+    var h = '', st = '';
+    LV.forEach(function (L, i) {
+      if (L.st !== st) { if (st) h += '</div>'; st = L.st; h += '<div class="stage"><span>' + st + '</span>'; }
+      h += '<button class="chip' + (i === cur ? ' cur' : '') + (save.pts[i] != null ? ' done' : '') + '" data-i="' + i + '" aria-label="Level ' + (i + 1) + (L.star ? ', Erweiterung' : '') + '">' + (i + 1) + (L.star ? ' ★' : '') + '</button>';
+    });
+    $('levels').innerHTML = h + '</div>';
+    $('pts').textContent = total() + ' / ' + LV.length * 4 + ' Punkte';
+  }
+  $('levels').addEventListener('click', function (ev) { var b = ev.target.closest('.chip'); if (b) load(parseInt(b.dataset.i, 10)); });
+
+  function question() {
+    var L = LV[cur], perm = PERM[cur % PERM.length], ans = save.q[cur], h = '';
+    $('qCard').hidden = false;
+    $('qText').innerHTML = 'Bonusfrage: ' + L.q.t;
+    perm.forEach(function (oi) {
+      var cls = ans != null ? (oi === 0 ? ' correct' : (ans === 0 && save.qPick && save.qPick[cur] === oi ? ' wrong' : '')) : '';
+      h += '<button class="opt' + cls + '" data-o="' + oi + '"' + (ans != null ? ' disabled' : '') + '>' + L.q.o[oi] + '</button>';
+    });
+    $('qOpts').innerHTML = h;
+    $('qFb').innerHTML = ans != null ? '<div class="fb ' + (ans === 1 ? 'ok' : 'inf') + '">' + (ans === 1 ? 'Richtig, +1 Punkt. ' : 'Nicht ganz. ') + L.q.e + '</div>' : '';
+    var nx = nextOpen();
+    $('next').hidden = ans == null || nx < 0;
+    $('endCard').hidden = !(ans != null && allDone());
+    if (!$('endCard').hidden) finale();
+  }
+  $('qOpts').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.opt'); if (!b || save.q[cur] != null) return;
+    var oi = parseInt(b.dataset.o, 10);
+    save.q[cur] = oi === 0 ? 1 : 0; save.qPick = save.qPick || []; save.qPick[cur] = oi; store();
+    question(); levelBar();
+  });
+  function allDone() { return LV.every(function (_, i) { return save.pts[i] != null && save.q[i] != null; }); }
+  function nextOpen() { for (var k = 1; k <= LV.length; k++) { var i = (cur + k) % LV.length; if (save.pts[i] == null) return i; } return -1; }
+  $('next').addEventListener('click', function () { var i = nextOpen(); if (i >= 0) { load(i); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+  function finale() {
+    var t = total(), max = LV.length * 4;
+    var rank = t >= 45 ? 'Parabel-Profi' : t >= 32 ? 'Formen-Kenner' : 'Auf gutem Weg';
+    $('endCard').innerHTML = '<h2 style="font-family:var(--serif);font-weight:400;font-size:1.5rem;color:var(--accent)">Alle Level geschafft: ' + rank + '</h2><p style="margin-top:6px">Du hast <b>' + t + ' von ' + max + ' Punkten</b> erreicht. Jetzt bist du bereit für die Aufgaben 4 und 5 zu Wäsche Max.</p>';
+  }
+
+  function load(i) {
+    cur = i; var L = LV[i], done = save.pts[i] != null;
+    P = {}; ORDER[L.form].forEach(function (k) { P[k] = done ? L.target[k] : L.start[k]; });
+    tries = 0; hinted = false;
+    $('lvTitle').textContent = 'Level ' + (i + 1) + ' · ' + (L.st === 'Wäsche Max' ? 'Wäsche Max (' + FORMNAME[L.form] + ')' : FORMNAME[L.form]);
+    $('lvBadge').textContent = L.star ? '★ Erweiterung' : 'Basis';
+    $('lvBadge').className = 'badge' + (L.star ? ' star' : '');
+    $('lvTask').textContent = L.task;
+    $('fGen').innerHTML = GEN[L.form];
+    $('fCur').innerHTML = term(L.form, P);
+    $('check').disabled = done; $('hint').disabled = done;
+    $('fb').innerHTML = done ? '<div class="fb ok">Treffer! Dieses Level hast du mit ' + save.pts[i] + ' von 3 Punkten gelöst.</div>' : '';
+    $('qCard').hidden = true; $('endCard').hidden = true;
+    controls(); draw(); steck(); levelBar();
+    if (done) question();
+  }
+
+  $('check').addEventListener('click', function () {
+    var L = LV[cur], A = feat(L.form, P), T = feat(L.form, L.target);
+    if (P.a === 0) { $('fb').innerHTML = '<div class="fb err">Mit a = 0 entsteht keine Parabel. Wähle a ≠ 0.</div>'; return; }
+    tries++;
+    var c1 = (A.a > 0) === (T.a > 0), c2 = eq(Math.abs(A.a), Math.abs(T.a)), c3 = eq(A.xs, T.xs) && eq(A.ys, T.ys);
+    if (c1 && c2 && c3) {
+      var pts = Math.max(1, 3 - (tries - 1) - (hinted ? 1 : 0));
+      save.pts[cur] = pts; store();
+      ORDER[L.form].forEach(function (k) { P[k] = L.target[k]; });
+      $('fb').innerHTML = '<div class="fb ok">Treffer! Die Parabeln sind deckungsgleich. +' + pts + (pts === 1 ? ' Punkt' : ' Punkte') + '</div>';
+      $('check').disabled = true; $('hint').disabled = true;
+      controls(); draw(); steck(); levelBar(); question();
+    } else {
+      var chip = function (ok, t) { return '<span class="' + (ok ? 'y' : 'n') + '">' + (ok ? '✓ ' : '✗ ') + t + '</span>'; };
+      $('fb').innerHTML = '<div class="fb err">Noch nicht deckungsgleich. Vergleiche:<div class="checks">' + chip(c1, 'Öffnungsrichtung') + chip(c2, 'Streckung / Stauchung') + chip(c3, 'Lage des Scheitelpunkts') + '</div></div>';
+    }
+  });
+  $('hint').addEventListener('click', function () {
+    hinted = true;
+    $('fb').innerHTML = '<div class="fb inf"><b>Tipp:</b> ' + LV[cur].hint + '</div>';
+  });
+  var armed = false;
+  $('reset').addEventListener('click', function () {
+    if (!armed) { armed = true; $('reset').textContent = 'Wirklich löschen? Nochmal tippen'; setTimeout(function () { armed = false; $('reset').textContent = 'Spielstand löschen'; }, 4000); return; }
+    save = { pts: [], q: [] }; try { localStorage.removeItem(KEY); } catch (e) {}
+    armed = false; $('reset').textContent = 'Spielstand löschen'; load(0);
+  });
+
+  var first = 0; for (var j = 0; j < LV.length; j++) { if (save.pts[j] == null) { first = j; break; } }
+  load(first);
+})();
+</script>
+</body>
+</html>
